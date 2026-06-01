@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import NumberBoard from './components/NumberBoard'
 import WinModal from './components/WinModal'
+import LoseModal from './components/LoseModal'
 import BuyCards from './pages/BuyCards'
 import BingoTables from './pages/BingoTables'
 import MyBets from './pages/MyBets'
@@ -53,6 +54,7 @@ export default function App() {
   const [currentNumber, setCurrentNumber] = useState(null)
   const [animKey, setAnimKey]             = useState(0)
   const [winInfo, setWinInfo]             = useState(null)
+  const [loseInfo, setLoseInfo]           = useState(null)
   const [winPositions, setWinPositions]   = useState([])
 
   const wonRef       = useRef(false)
@@ -310,6 +312,7 @@ export default function App() {
               cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
               possibleWin: r.possible_win, winType: null, payout: 0, callCount: seq.length,
             }, ...h])
+            setLoseInfo({ callCount: seq.length })
           }
           supabase.from('game_rounds').update({ status: 'finished' })
             .eq('round_id', r.round_id).in('status', ['waiting', 'active']).then(() => {})
@@ -340,6 +343,7 @@ export default function App() {
       possibleWin: r.possible_win, winType: null, payout: 0,
       callCount: calledNumbers.length,
     }, ...h])
+    setLoseInfo({ callCount: null }) // null = someone else won
     setTimeout(() => {
       if (roundRef.current?.status === 'finished') createNewRound()
     }, 5000)
@@ -462,7 +466,7 @@ export default function App() {
   }, [bettingOpen])
 
   const handlePlayAgain = () => {
-    setWinInfo(null); setCalledNumbers([])
+    setWinInfo(null); setLoseInfo(null); setCalledNumbers([])
     setCurrentNumber(null); setSelectedCardIds(new Set())
     setActiveTab(0)
   }
@@ -618,9 +622,18 @@ export default function App() {
 
       {winInfo && (
         <WinModal
-          winType={winInfo.winType}       payout={winInfo.payout}
+          winType={winInfo.winType}         payout={winInfo.payout}
+          payoutPerCard={winInfo.payoutPerCard} winCount={winInfo.winCount}
           stakeReturn={winInfo.stakeReturn} totalReturn={winInfo.totalReturn}
-          callCount={winInfo.callCount}   onClose={() => setWinInfo(null)}
+          callCount={winInfo.callCount}     onClose={() => setWinInfo(null)}
+          onPlayAgain={handlePlayAgain}
+        />
+      )}
+
+      {loseInfo && !winInfo && (
+        <LoseModal
+          callCount={loseInfo.callCount}
+          onClose={() => setLoseInfo(null)}
           onPlayAgain={handlePlayAgain}
         />
       )}
