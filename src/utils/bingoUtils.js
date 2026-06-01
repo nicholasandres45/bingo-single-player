@@ -8,6 +8,54 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6D2B79F5)
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 0x100000000
+  }
+}
+
+function hashStr(str) {
+  let h = 0x811c9dc5
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h
+}
+
+function seededCard(rng) {
+  const card = {}
+  COLUMNS.forEach(col => {
+    const [min, max] = COLUMN_RANGES[col]
+    const pool = Array.from({ length: max - min + 1 }, (_, i) => min + i)
+    for (let i = 0; i < 5; i++) {
+      const j = i + Math.floor(rng() * (pool.length - i))
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+    card[col] = pool.slice(0, 5)
+  })
+  card['N'][2] = 'FREE'
+  return card
+}
+
+export function generate450CardsForRound(roundId) {
+  const rng = mulberry32(hashStr(roundId))
+  return Array.from({ length: TOTAL_CARDS }, () => seededCard(rng))
+}
+
+export function generateCallSequenceForRound(roundId) {
+  const rng = mulberry32(hashStr(roundId) ^ 0xDEADBEEF)
+  const all = Array.from({ length: 75 }, (_, i) => i + 1)
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[all[i], all[j]] = [all[j], all[i]]
+  }
+  return all
+}
+
 export function generateBingoCard() {
   const card = {}
   COLUMNS.forEach(col => {

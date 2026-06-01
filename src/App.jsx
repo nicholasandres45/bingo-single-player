@@ -5,12 +5,12 @@ import BuyCards from './pages/BuyCards'
 import BingoTables from './pages/BingoTables'
 import MyBets from './pages/MyBets'
 import {
+  generate450CardsForRound,
   generateMultipleCards,
-  generateCallSequence,
+  generateCallSequenceForRound,
   getMarkedPositions,
   checkWinPatterns,
   calculatePayout,
-  calculatePossibleWin,
   getColumnForNumber,
   MAX_CALLS,
   TOTAL_CARDS,
@@ -20,148 +20,432 @@ import { supabase } from './lib/supabase'
 const tg = window.Telegram?.WebApp
 const TABS = ['BUY CARDS', 'BINGO TABLES', 'MY BETS']
 const CALL_INTERVAL_MS = 2000
+const COUNTDOWN_SECS = 30
+const PLAYER_ID_KEY = 'bingo_pid'
 
 const COL_COLORS = {
-  B: 'text-blue-400',
-  I: 'text-cyan-400',
-  N: 'text-white',
-  G: 'text-yellow-400',
-  O: 'text-orange-400',
+  B: 'text-blue-400', I: 'text-cyan-400', N: 'text-white',
+  G: 'text-yellow-400', O: 'text-orange-400',
+}
+
+function getPlayerId() {
+  let id = localStorage.getItem(PLAYER_ID_KEY)
+  if (!id) {
+    id = `P${Date.now().toString(36).toUpperCase()}`
+    localStorage.setItem(PLAYER_ID_KEY, id)
+  }
+  return id
 }
 
 export default function App() {
-  const [activeTab, setActiveTab]         = useState(0)
-  const [betAmount, setBetAmount]         = useState(10)
+  const [playerId]          = useState(getPlayerId)
+  const [balance, setBalance] = useState(null)
+  const [round, setRound]   = useState(null)
+  const [myBets, setMyBets] = useState([])
+  const [betHistory, setBetHistory] = useState([])
+
+  const [activeTab, setActiveTab]   = useState(0)
+  const [betAmount, setBetAmount]   = useState(10)
   const [selectedCardIds, setSelectedCardIds] = useState(new Set())
+
+  const [countdown, setCountdown]         = useState(null)
   const [calledNumbers, setCalledNumbers] = useState([])
   const [currentNumber, setCurrentNumber] = useState(null)
-  const [gameActive, setGameActive]       = useState(false)
-  const [gameOver, setGameOver]           = useState(false)
-  const [winInfo, setWinInfo]             = useState(null)
-  const [betHistory, setBetHistory]       = useState([])
-  const [roundId, setRoundId]             = useState(null)
-  const [winPositions, setWinPositions]   = useState([])
   const [animKey, setAnimKey]             = useState(0)
-  const [sessionId] = useState(() => `BSP-${Date.now().toString(36).toUpperCase()}`)
+  const [winInfo, setWinInfo]             = useState(null)
+  const [winPositions, setWinPositions]   = useState([])
 
-  // Generate 450 cards once — never regenerated
-  const allCards = useMemo(() => generateMultipleCards(TOTAL_CARDS), [])
+  const wonRef       = useRef(false)
+  const intervalRef  = useRef(null)
+  const ctdwnRef     = useRef(null)
+  const roundRef     = useRef(null)
+  const myBetsRef    = useRef([])
+  const allCardsRef  = useRef(null)
+  const recordedRef  = useRef(new Set())
 
-  const possibleWin = calculatePossibleWin(betAmount)
-  const totalCost   = betAmount * selectedCardIds.size
+  useEffect(() => { roundRef.current = round }, [round])
+  useEffect(() => { myBetsRef.current = myBets }, [myBets])
 
-  const intervalRef = useRef(null)
-  const wonRef      = useRef(false)
-
-  useEffect(() => {
-    if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor('#000000'); tg.setBackgroundColor('#000000') }
-  }, [])
-
+  // Animate on new number
   useEffect(() => { if (currentNumber) setAnimKey(k => k + 1) }, [currentNumber])
 
+  // ── Derived ──────────────────────────────────────────────────
+  const allCards = useMemo(() => {
+    if (!round?.round_id) return generateMultipleCards(TOTAL_CARDS)
+    const cards = generate450CardsForRound(round.round_id)
+    allCardsRef.current = cards
+    return cards
+  }, [round?.round_id])
+
+  const callSequence = useMemo(() => {
+    if (!round?.round_id) return []
+    return generateCallSequenceForRound(round.round_id)
+  }, [round?.round_id])
+
+  const myCardIds = useMemo(
+    () => new Set(myBets.flatMap(b => b.card_ids)),
+    [myBets]
+  )
+
+  const phase = useMemo(() => {
+    if (!round) return 'loading'
+    if (round.status === 'finished') return 'finished'
+    if (round.status === 'active') return 'calling'
+    if (round.status === 'waiting') {
+      if (!round.start_time) return 'betting'
+      const elapsed = Date.now() - new Date(round.start_time).getTime()
+      if (elapsed < COUNTDOWN_SECS * 1000) return 'countdown'
+      return round.player_count >= 2 ? 'calling' : 'betting'
+    }
+    return 'betting'
+  }, [round, countdown]) // countdown dep so phase refreshes every 500ms tick
+
+  const possibleWin  = round?.possible_win ?? 0
+  const totalCost    = betAmount * selectedCardIds.size
+  const bettingOpen  = phase === 'betting' || phase === 'countdown'
+  const col          = currentNumber ? getColumnForNumber(currentNumber) : null
+
+  // ── Init ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor('#000000'); tg.setBackgroundColor('#000000') }
+    initWallet()
+    fetchCurrentRound()
+    const ch = subscribeToUpdates()
+    return () => { supabase.removeChannel(ch) }
+  }, []) // eslint-disable-line
+
+  async function initWallet() {
+    await supabase.from('wallets').upsert(
+      { player_id: playerId, balance: 500 },
+      { onConflict: 'player_id', ignoreDuplicates: true }
+    )
+    const { data } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
+    if (data) setBalance(data.balance)
+  }
+
+  async function fetchCurrentRound() {
+    const { data } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .in('status', ['waiting', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (data) {
+      setRound(data)
+      fetchMyBets(data.round_id)
+    } else {
+      createNewRound()
+    }
+  }
+
+  async function fetchMyBets(roundId) {
+    const { data } = await supabase
+      .from('round_bets')
+      .select('id, card_ids, bet_amount, total_cost')
+      .eq('round_id', roundId)
+      .eq('player_id', playerId)
+    setMyBets(data || [])
+  }
+
+  function subscribeToUpdates() {
+    return supabase
+      .channel('bingo-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_rounds' }, payload => {
+        const updated = payload.new
+        if (!updated) return
+        const prev = roundRef.current
+
+        if (!prev || prev.round_id === updated.round_id) {
+          setRound(updated)
+        } else if (prev.status === 'finished' && updated.status === 'waiting') {
+          // New round started
+          setRound(updated)
+          setMyBets([])
+          setCalledNumbers([])
+          setCurrentNumber(null)
+          setWinInfo(null)
+          setWinPositions([])
+          wonRef.current = false
+        }
+      })
+      .subscribe()
+  }
+
+  async function createNewRound() {
+    const newId = `BNG${Date.now().toString(36).toUpperCase()}`
+    const { data, error } = await supabase
+      .from('game_rounds')
+      .insert({ round_id: newId, status: 'waiting' })
+      .select()
+      .single()
+    if (data) {
+      setRound(data)
+      setMyBets([])
+      setCalledNumbers([])
+      setCurrentNumber(null)
+      setWinInfo(null)
+      setWinPositions([])
+      wonRef.current = false
+    } else if (error) {
+      setTimeout(fetchCurrentRound, 600)
+    }
+  }
+
+  // ── Countdown ────────────────────────────────────────────────
+  useEffect(() => {
+    clearInterval(ctdwnRef.current)
+
+    if (round?.start_time && round.status === 'waiting') {
+      const tick = () => {
+        const elapsed = Date.now() - new Date(round.start_time).getTime()
+        const rem = Math.max(0, COUNTDOWN_SECS - Math.floor(elapsed / 1000))
+        setCountdown(rem)
+        if (rem === 0) {
+          clearInterval(ctdwnRef.current)
+          const r = roundRef.current
+          if (!r || r.status !== 'waiting') return
+          if (r.player_count >= 2) {
+            supabase.from('game_rounds')
+              .update({ status: 'active' })
+              .eq('round_id', r.round_id)
+              .eq('status', 'waiting')
+              .then(() => {})
+          } else {
+            // Not enough players — reset countdown so betting re-opens
+            supabase.from('game_rounds')
+              .update({ start_time: null })
+              .eq('round_id', r.round_id)
+              .eq('status', 'waiting')
+              .then(() => {})
+          }
+        }
+      }
+      tick()
+      ctdwnRef.current = setInterval(tick, 500)
+    } else {
+      setCountdown(null)
+    }
+
+    return () => clearInterval(ctdwnRef.current)
+  }, [round?.start_time, round?.status, round?.round_id, round?.player_count])
+
+  // ── Number calling ───────────────────────────────────────────
+  useEffect(() => {
+    clearInterval(intervalRef.current)
+    wonRef.current = false
+
+    if (phase !== 'calling' || !round?.start_time || !round.round_id) return
+
+    const seq = callSequence.length ? callSequence : generateCallSequenceForRound(round.round_id)
+    allCardsRef.current = allCards
+    const callStart = new Date(round.start_time).getTime() + COUNTDOWN_SECS * 1000
+
+    const tick = () => {
+      const elapsed = Date.now() - callStart
+      if (elapsed < 0) return
+
+      const callIdx = Math.floor(elapsed / CALL_INTERVAL_MS)
+      if (callIdx < 0) return
+
+      const clamped = Math.min(callIdx, seq.length - 1)
+      const called  = seq.slice(0, clamped + 1)
+
+      setCalledNumbers([...called])
+      setCurrentNumber(seq[clamped] ?? null)
+
+      // Win check
+      if (!wonRef.current && roundRef.current?.status !== 'finished') {
+        const cards = allCardsRef.current
+        const cardIds = [...new Set(myBetsRef.current.flatMap(b => b.card_ids))]
+        for (const cid of cardIds) {
+          if (!cards?.[cid]) continue
+          const marked = getMarkedPositions(cards[cid], called)
+          const wins   = checkWinPatterns(marked)
+          if (wins.length > 0) {
+            const order = ['One Line', 'Four Corners', 'Diagonal', 'Two Lines', 'Full House']
+            const best  = wins.reduce((a, b) => order.indexOf(b.type) > order.indexOf(a.type) ? b : a)
+            const payout = calculatePayout(roundRef.current?.possible_win ?? 0, best.type)
+            wonRef.current = true
+            clearInterval(intervalRef.current)
+            doWin({ cardId: cid, winType: best.type, payout, positions: best.positions, callCount: clamped + 1 })
+            return
+          }
+        }
+      }
+
+      // All numbers called — no winner
+      if (clamped >= seq.length - 1 && !wonRef.current) {
+        clearInterval(intervalRef.current)
+        const r = roundRef.current
+        if (r && !recordedRef.current.has(r.round_id)) {
+          recordedRef.current.add(r.round_id)
+          const bets = myBetsRef.current
+          if (bets.length > 0) {
+            setBetHistory(h => [{
+              roundId: r.round_id, status: 'lost',
+              betAmount: bets[0].bet_amount,
+              cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
+              possibleWin: r.possible_win, winType: null, payout: 0, callCount: seq.length,
+            }, ...h])
+          }
+          supabase.from('game_rounds').update({ status: 'finished' })
+            .eq('round_id', r.round_id).in('status', ['waiting', 'active']).then(() => {})
+        }
+        setTimeout(() => {
+          if (roundRef.current?.status === 'finished') createNewRound()
+        }, 5000)
+      }
+    }
+
+    tick()
+    intervalRef.current = setInterval(tick, CALL_INTERVAL_MS)
+    return () => clearInterval(intervalRef.current)
+  }, [phase, round?.round_id, round?.start_time, round?.status]) // eslint-disable-line
+
+  // When round finishes (someone else won) → add lost entry
+  useEffect(() => {
+    if (round?.status !== 'finished') return
+    const r = round
+    if (recordedRef.current.has(r.round_id)) return
+    const bets = myBetsRef.current
+    if (bets.length === 0) return
+    recordedRef.current.add(r.round_id)
+    setBetHistory(h => [{
+      roundId: r.round_id, status: 'lost',
+      betAmount: bets[0].bet_amount,
+      cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
+      possibleWin: r.possible_win, winType: null, payout: 0,
+      callCount: calledNumbers.length,
+    }, ...h])
+    setTimeout(() => {
+      if (roundRef.current?.status === 'finished') createNewRound()
+    }, 5000)
+  }, [round?.status, round?.round_id]) // eslint-disable-line
+
+  async function doWin(win) {
+    const r = roundRef.current
+    if (!r) return
+
+    const { data } = await supabase
+      .from('game_rounds')
+      .update({
+        status: 'finished',
+        winner_player_id: playerId,
+        winner_card_id: win.cardId,
+        winner_type: win.winType,
+        winner_payout: win.payout,
+      })
+      .eq('round_id', r.round_id)
+      .in('status', ['waiting', 'active'])
+      .select()
+      .single()
+
+    if (!data) return // someone else got there first
+
+    recordedRef.current.add(r.round_id)
+
+    // Credit wallet
+    const { data: w } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
+    if (w) {
+      const newBal = w.balance + win.payout
+      await supabase.from('wallets').update({ balance: newBal }).eq('player_id', playerId)
+      setBalance(newBal)
+    }
+
+    setWinInfo(win)
+    setWinPositions(win.positions || [])
+    setActiveTab(1)
+
+    const bets = myBetsRef.current
+    setBetHistory(h => [{
+      roundId: r.round_id, status: 'won',
+      betAmount: bets[0]?.bet_amount,
+      cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
+      possibleWin: r.possible_win, winType: win.winType,
+      payout: win.payout, callCount: win.callCount,
+    }, ...h])
+
+    setTimeout(() => {
+      if (roundRef.current?.status === 'finished') createNewRound()
+    }, 5000)
+  }
+
+  // ── Bet placement ────────────────────────────────────────────
+  const handleBet = useCallback(async () => {
+    if (selectedCardIds.size === 0 || !bettingOpen) return
+
+    // Authoritative balance check
+    const { data: wallet } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
+    if (!wallet || wallet.balance < totalCost) return
+
+    let r = roundRef.current
+
+    if (!r) {
+      await createNewRound()
+      await new Promise(res => setTimeout(res, 300))
+      r = roundRef.current
+      if (!r) return
+    }
+
+    // Double-check betting still open
+    if (r.start_time) {
+      const elapsed = Date.now() - new Date(r.start_time).getTime()
+      if (elapsed >= COUNTDOWN_SECS * 1000) return
+    }
+
+    // First bet on this round sets start_time
+    if (!r.start_time) {
+      const { data: updated } = await supabase
+        .from('game_rounds')
+        .update({ start_time: new Date().toISOString() })
+        .eq('round_id', r.round_id)
+        .is('start_time', null)
+        .select()
+        .single()
+      if (updated) { setRound(updated); r = updated }
+    }
+
+    // Deduct wallet
+    const newBal = wallet.balance - totalCost
+    await supabase.from('wallets').update({ balance: newBal }).eq('player_id', playerId)
+    setBalance(newBal)
+
+    // Insert bet
+    const { data: bet } = await supabase.from('round_bets').insert({
+      round_id: r.round_id,
+      player_id: playerId,
+      card_ids: [...selectedCardIds],
+      bet_amount: betAmount,
+      total_cost: totalCost,
+    }).select().single()
+
+    if (bet) setMyBets(prev => [...prev, bet])
+    setSelectedCardIds(new Set())
+    setActiveTab(1)
+  }, [selectedCardIds, bettingOpen, totalCost, betAmount, playerId]) // eslint-disable-line
+
   const toggleCard = useCallback((id, forceRemove = false) => {
-    if (gameActive) return
+    if (!bettingOpen) return
     setSelectedCardIds(prev => {
       const next = new Set(prev)
       if (forceRemove || next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
-  }, [gameActive])
-
-  const clearCards = useCallback(() => {
-    if (gameActive) return
-    setSelectedCardIds(new Set())
-  }, [gameActive])
-
-  const checkForWin = useCallback((called, playerCards, pw) => {
-    for (const { id, card } of playerCards) {
-      const marked = getMarkedPositions(card, called)
-      const wins   = checkWinPatterns(marked)
-      if (wins.length > 0) {
-        const order = ['One Line', 'Four Corners', 'Diagonal', 'Two Lines', 'Full House']
-        const best  = wins.reduce((a, b) => order.indexOf(b.type) > order.indexOf(a.type) ? b : a)
-        return { cardId: id, winType: best.type, payout: calculatePayout(pw, best.type), positions: best.positions }
-      }
-    }
-    return null
-  }, [])
-
-  const handleStartGame = useCallback(async () => {
-    if (selectedCardIds.size === 0 || gameActive) return
-
-    const playerCards = [...selectedCardIds].map(id => ({ id, card: allCards[id] }))
-    const sequence    = generateCallSequence()
-    const id          = `BSP-${Date.now().toString(36).toUpperCase()}`
-    const pw          = calculatePossibleWin(betAmount)
-
-    wonRef.current = false
-    setCalledNumbers([]); setCurrentNumber(null)
-    setGameActive(true); setGameOver(false)
-    setWinInfo(null); setWinPositions([])
-    setRoundId(id); setActiveTab(1)
-
-    try {
-      await supabase.from('game_sessions').insert({
-        round_id: id, bet_amount: betAmount,
-        card_count: selectedCardIds.size, possible_win: pw, status: 'active',
-      })
-    } catch (_) {}
-
-    let index = 0
-    clearInterval(intervalRef.current)
-    intervalRef.current = setInterval(() => {
-      index++
-      if (index > sequence.length) {
-        clearInterval(intervalRef.current); setGameActive(false); setGameOver(true); return
-      }
-
-      const called = sequence.slice(0, index)
-      setCurrentNumber(sequence[index - 1])
-      setCalledNumbers([...called])
-
-      if (!wonRef.current) {
-        const win = checkForWin(called, playerCards, pw)
-        if (win) {
-          wonRef.current = true
-          clearInterval(intervalRef.current)
-          setWinInfo({ ...win, callCount: index })
-          setWinPositions(win.positions || [])
-          setGameActive(false); setGameOver(true)
-          supabase.from('game_sessions').update({
-            status: 'won', win_type: win.winType, payout: win.payout, call_count: index,
-          }).eq('round_id', id).then(() => {})
-          setBetHistory(h => [{
-            roundId: id, betAmount, cardCount: selectedCardIds.size,
-            possibleWin: pw, status: 'won',
-            winType: win.winType, payout: win.payout, callCount: index,
-          }, ...h])
-          return
-        }
-      }
-
-      if (index === sequence.length && !wonRef.current) {
-        clearInterval(intervalRef.current); setGameActive(false); setGameOver(true)
-        setBetHistory(h => [{
-          roundId: id, betAmount, cardCount: selectedCardIds.size,
-          possibleWin: pw, status: 'lost', winType: null, payout: 0, callCount: index,
-        }, ...h])
-        supabase.from('game_sessions')
-          .update({ status: 'lost', call_count: index })
-          .eq('round_id', id).then(() => {})
-      }
-    }, CALL_INTERVAL_MS)
-  }, [selectedCardIds, betAmount, allCards, gameActive, checkForWin])
+  }, [bettingOpen])
 
   const handlePlayAgain = () => {
     setWinInfo(null); setCalledNumbers([])
-    setCurrentNumber(null); setGameOver(false)
-    setSelectedCardIds(new Set()); setActiveTab(0)
+    setCurrentNumber(null); setSelectedCardIds(new Set())
+    setActiveTab(0)
   }
 
-  useEffect(() => () => clearInterval(intervalRef.current), [])
-
-  const col = currentNumber ? getColumnForNumber(currentNumber) : null
+  useEffect(() => () => {
+    clearInterval(intervalRef.current)
+    clearInterval(ctdwnRef.current)
+  }, [])
 
   return (
     <div className="h-screen bg-black text-white flex flex-col w-full overflow-hidden">
@@ -170,16 +454,31 @@ export default function App() {
       <div className="bg-gray-950 border-b border-gray-800/60 px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-baseline gap-2">
           <h1 className="font-display text-xl text-cyan-400">BINGO</h1>
-          <span className="text-gray-700 text-[9px] font-mono-nums">{roundId || sessionId}</span>
+          <span className="text-gray-700 text-[9px] font-mono-nums truncate max-w-[72px]">
+            {round?.round_id ?? '...'}
+          </span>
         </div>
-        <span className={`
-          px-2.5 py-0.5 rounded-full text-[9px] font-semibold tracking-wider border
-          ${gameActive  ? 'bg-green-950/80 text-green-400 border-green-800'
-          : gameOver    ? 'bg-gray-900    text-gray-500  border-gray-700'
-          :               'bg-green-950/80 text-green-400 border-green-800'}
-        `}>
-          {gameActive ? 'In Progress' : gameOver ? 'Game Over' : 'Betting Open'}
-        </span>
+        <div className="flex items-center gap-2">
+          {balance !== null && (
+            <span className="font-mono-nums text-[9px] font-bold text-yellow-400">
+              {balance.toLocaleString()} ETB
+            </span>
+          )}
+          <span className={`
+            px-2.5 py-0.5 rounded-full text-[9px] font-semibold tracking-wider border shrink-0
+            ${phase === 'calling'   ? 'bg-green-950/80 text-green-400  border-green-800'
+            : phase === 'finished'  ? 'bg-gray-900     text-gray-500   border-gray-700'
+            : phase === 'countdown' ? 'bg-yellow-950/80 text-yellow-400 border-yellow-800'
+            : phase === 'loading'   ? 'bg-gray-900     text-gray-600   border-gray-700'
+            :                         'bg-green-950/80 text-green-400  border-green-800'}
+          `}>
+            {phase === 'calling'   ? 'In Progress'
+            : phase === 'finished' ? 'Game Over'
+            : phase === 'countdown' ? `${countdown ?? '…'}s`
+            : phase === 'loading'  ? 'Loading…'
+            :                        'Betting Open'}
+          </span>
+        </div>
       </div>
 
       {/* ── Possible Win Banner ── */}
@@ -187,7 +486,7 @@ export default function App() {
         <div className="flex items-center gap-1.5">
           <span className="text-gray-600 text-[9px] uppercase tracking-widest font-semibold">Possible Win</span>
           <span className="text-gray-700 text-[9px]">·</span>
-          <span className="text-gray-600 text-[9px]">Platform 10%</span>
+          <span className="text-gray-600 text-[9px]">{round?.player_count ?? 0} player{round?.player_count !== 1 ? 's' : ''}</span>
         </div>
         <span className="font-mono-nums text-base font-bold text-yellow-400"
           style={{ textShadow: '0 0 12px rgba(250,204,21,0.4)' }}>
@@ -294,16 +593,18 @@ export default function App() {
           <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === 0 && (
               <BuyCards
-                betAmount={betAmount}       setBetAmount={setBetAmount}
+                betAmount={betAmount}             setBetAmount={setBetAmount}
                 selectedCardIds={selectedCardIds} onToggleCard={toggleCard}
-                possibleWin={possibleWin}   totalCost={totalCost}
-                onStartGame={handleStartGame}    gameActive={gameActive}
+                possibleWin={possibleWin}         totalCost={totalCost}
+                onBet={handleBet}
+                phase={phase}                     countdown={countdown}
+                balance={balance}                 playerCount={round?.player_count ?? 0}
               />
             )}
             {activeTab === 1 && (
               <BingoTables
                 allCards={allCards}
-                selectedCardIds={selectedCardIds}
+                selectedCardIds={myCardIds}
                 calledNumbers={calledNumbers}
                 winPositions={winInfo ? winPositions : []}
               />
