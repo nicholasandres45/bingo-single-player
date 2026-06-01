@@ -126,6 +126,21 @@ export default function App() {
     if (data) setBalance(data.balance)
   }
 
+  // ── Shared reset helper ──────────────────────────────────────
+  function resetForNewRound(newRound) {
+    setRound(newRound)
+    setMyBets([])
+    setCalledNumbers([])
+    setCurrentNumber(null)
+    setWinInfo(null)
+    setLoseInfo(null)
+    setWinPositions([])
+    setTakenCardIds(new Set())
+    setSelectedCardIds(new Set())
+    wonRef.current = false
+    fetchTakenCards(newRound.round_id)
+  }
+
   async function fetchCurrentRound() {
     const { data } = await supabase
       .from('game_rounds')
@@ -136,9 +151,14 @@ export default function App() {
       .single()
 
     if (data) {
-      setRound(data)
-      fetchMyBets(data.round_id)
-      fetchTakenCards(data.round_id)
+      const prev = roundRef.current
+      if (!prev || prev.round_id !== data.round_id) {
+        resetForNewRound(data)
+      } else {
+        setRound(data)
+        fetchMyBets(data.round_id)
+        fetchTakenCards(data.round_id)
+      }
     } else {
       createNewRound()
     }
@@ -172,17 +192,14 @@ export default function App() {
         const prev = roundRef.current
 
         if (!prev || prev.round_id === updated.round_id) {
+          // Same round — just update status/fields
           setRound(updated)
-        } else if (prev.status === 'finished' && updated.status === 'waiting') {
-          // New round started
-          setRound(updated)
-          setMyBets([])
-          setCalledNumbers([])
-          setCurrentNumber(null)
-          setWinInfo(null)
-          setWinPositions([])
-          setTakenCardIds(new Set())
-          wonRef.current = false
+        } else if (
+          updated.status === 'waiting' &&
+          new Date(updated.created_at) > new Date(prev.created_at ?? 0)
+        ) {
+          // A newer waiting round appeared — switch to it regardless of prev status
+          resetForNewRound(updated)
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'round_bets' }, payload => {
@@ -200,6 +217,20 @@ export default function App() {
   }
 
   async function createNewRound() {
+    // Check for an existing waiting round first — another client may have just created one
+    const { data: existing } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .eq('status', 'waiting')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (existing) {
+      resetForNewRound(existing)
+      return
+    }
+
     const newId = `BNG${Date.now().toString(36).toUpperCase()}`
     const { data, error } = await supabase
       .from('game_rounds')
@@ -207,16 +238,10 @@ export default function App() {
       .select()
       .single()
     if (data) {
-      setRound(data)
-      setMyBets([])
-      setCalledNumbers([])
-      setCurrentNumber(null)
-      setWinInfo(null)
-      setWinPositions([])
-      setTakenCardIds(new Set())
-      wonRef.current = false
+      resetForNewRound(data)
     } else if (error) {
-      setTimeout(fetchCurrentRound, 600)
+      // Another client may have created one concurrently — fetch it
+      setTimeout(fetchCurrentRound, 500)
     }
   }
 
@@ -327,7 +352,7 @@ export default function App() {
             .eq('round_id', r.round_id).in('status', ['waiting', 'active']).then(() => {})
         }
         setTimeout(() => {
-          if (roundRef.current?.status === 'finished') createNewRound()
+          if (roundRef.current?.status === 'finished') fetchCurrentRound()
         }, 5000)
       }
     }
@@ -343,7 +368,13 @@ export default function App() {
     const r = round
     if (recordedRef.current.has(r.round_id)) return
     const bets = myBetsRef.current
-    if (bets.length === 0) return
+    if (bets.length === 0) {
+      // No bets — still need to transition to next round
+      setTimeout(() => {
+        if (roundRef.current?.status === 'finished') fetchCurrentRound()
+      }, 5000)
+      return
+    }
     recordedRef.current.add(r.round_id)
     setBetHistory(h => [{
       roundId: r.round_id, status: 'lost',
@@ -354,7 +385,7 @@ export default function App() {
     }, ...h])
     setLoseInfo({ callCount: null }) // null = someone else won
     setTimeout(() => {
-      if (roundRef.current?.status === 'finished') createNewRound()
+      if (roundRef.current?.status === 'finished') fetchCurrentRound()
     }, 5000)
   }, [round?.status, round?.round_id]) // eslint-disable-line
 
@@ -402,7 +433,7 @@ export default function App() {
     }, ...h])
 
     setTimeout(() => {
-      if (roundRef.current?.status === 'finished') createNewRound()
+      if (roundRef.current?.status === 'finished') fetchCurrentRound()
     }, 5000)
   }
 
@@ -482,9 +513,12 @@ export default function App() {
   }, [bettingOpen, takenCardIds])
 
   const handlePlayAgain = () => {
-    setWinInfo(null); setLoseInfo(null); setCalledNumbers([])
-    setCurrentNumber(null); setSelectedCardIds(new Set())
+    setWinInfo(null)
+    setLoseInfo(null)
+    setSelectedCardIds(new Set())
     setActiveTab(0)
+    // If round finished but new round hasn't loaded yet, fetch/create one now
+    if (roundRef.current?.status === 'finished') fetchCurrentRound()
   }
 
   useEffect(() => () => {
