@@ -255,23 +255,44 @@ export default function App() {
       setCalledNumbers([...called])
       setCurrentNumber(seq[clamped] ?? null)
 
-      // Win check
+      // Win check — evaluate every bet card, collect all winners
       if (!wonRef.current && roundRef.current?.status !== 'finished') {
-        const cards = allCardsRef.current
+        const cards  = allCardsRef.current
         const cardIds = [...new Set(myBetsRef.current.flatMap(b => b.card_ids))]
+        const order  = ['One Line', 'Four Corners', 'Diagonal', 'Two Lines', 'Full House']
+        const winners = []
+
         for (const cid of cardIds) {
           if (!cards?.[cid]) continue
           const marked = getMarkedPositions(cards[cid], called)
           const wins   = checkWinPatterns(marked)
           if (wins.length > 0) {
-            const order = ['One Line', 'Four Corners', 'Diagonal', 'Two Lines', 'Full House']
-            const best  = wins.reduce((a, b) => order.indexOf(b.type) > order.indexOf(a.type) ? b : a)
-            const payout = calculatePayout(roundRef.current?.possible_win ?? 0, best.type)
-            wonRef.current = true
-            clearInterval(intervalRef.current)
-            doWin({ cardId: cid, winType: best.type, payout, positions: best.positions, callCount: clamped + 1 })
-            return
+            const best = wins.reduce((a, b) => order.indexOf(b.type) > order.indexOf(a.type) ? b : a)
+            winners.push({ cardId: cid, winType: best.type, positions: best.positions })
           }
+        }
+
+        if (winners.length > 0) {
+          // Best win type across all winning cards — each card earns that same payout
+          const bestType = winners.reduce((a, b) =>
+            order.indexOf(b.winType) > order.indexOf(a.winType) ? b : a
+          ).winType
+          const pw = roundRef.current?.possible_win ?? 0
+          const payoutPerCard = calculatePayout(pw, bestType)
+          const totalPayout   = payoutPerCard * winners.length
+
+          wonRef.current = true
+          clearInterval(intervalRef.current)
+          doWin({
+            cardId: winners[0].cardId,
+            winType: bestType,
+            payout: totalPayout,
+            payoutPerCard,
+            winCount: winners.length,
+            positions: winners[0].positions,
+            callCount: clamped + 1,
+          })
+          return
         }
       }
 
@@ -367,7 +388,8 @@ export default function App() {
       betAmount: bets[0]?.bet_amount,
       cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
       possibleWin: r.possible_win, winType: win.winType,
-      payout: win.payout, stakeReturn, totalReturn, callCount: win.callCount,
+      payout: win.payout, payoutPerCard: win.payoutPerCard, winCount: win.winCount,
+      stakeReturn, totalReturn, callCount: win.callCount,
     }, ...h])
 
     setTimeout(() => {

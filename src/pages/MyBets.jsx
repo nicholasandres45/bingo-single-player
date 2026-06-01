@@ -59,6 +59,14 @@ export default function MyBets({ betHistory }) {
           {/* Payout + stake return */}
           {bet.status === 'won' && (
             <div className="pt-1 border-t border-gray-800/60 flex flex-col gap-1">
+              {bet.winCount > 1 && bet.payoutPerCard > 0 && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Per Card</span>
+                  <span className="font-mono-nums text-[10px] font-semibold text-cyan-400 shrink-0">
+                    {bet.payoutPerCard.toLocaleString()} × {bet.winCount}
+                  </span>
+                </div>
+              )}
               {bet.payout > 0 && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Win Payout</span>
