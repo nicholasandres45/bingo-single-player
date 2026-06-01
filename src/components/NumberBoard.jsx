@@ -1,7 +1,7 @@
 import { COLUMNS_LIST } from '../utils/bingoUtils'
 
 const COLUMN_COLORS = {
-  B: 'text-blue-500',
+  B: 'text-blue-400',
   I: 'text-cyan-400',
   N: 'text-white',
   G: 'text-yellow-400',
@@ -20,10 +20,10 @@ export default function NumberBoard({ calledNumbers }) {
   const calledSet = new Set(calledNumbers)
 
   return (
-    <div className="p-2">
-      <div className="grid grid-cols-5 gap-0.5">
+    <div className="px-1.5 py-1">
+      <div className="grid grid-cols-5 gap-[2px]">
         {COLUMNS_LIST.map(col => (
-          <div key={col} className={`text-center font-bold text-xs py-1 ${COLUMN_COLORS[col]}`}>
+          <div key={col} className={`text-center font-bold text-[11px] pb-0.5 font-display ${COLUMN_COLORS[col]}`}>
             {col}
           </div>
         ))}
@@ -35,8 +35,11 @@ export default function NumberBoard({ calledNumbers }) {
               <div
                 key={`${col}-${num}`}
                 className={`
-                  flex items-center justify-center h-6 rounded text-xs font-semibold transition-all duration-300
-                  ${isCalled ? 'bg-cyan-600 text-white pop-in' : 'bg-gray-900 text-gray-500'}
+                  flex items-center justify-center h-[18px] rounded-[3px]
+                  font-mono-nums text-[9px] font-medium transition-all duration-300
+                  ${isCalled
+                    ? 'bg-cyan-600 text-white shadow-[0_0_6px_rgba(6,182,212,0.6)]'
+                    : 'bg-gray-900 text-gray-600'}
                 `}
               >
                 {num}
