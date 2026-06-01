@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { getColumnForNumber } from '../utils/bingoUtils'
+import { getColumnForNumber, MAX_CALLS } from '../utils/bingoUtils'
 
 const COLUMN_COLORS = {
-  B: 'text-red-500',
-  I: 'text-red-400',
+  B: 'text-blue-500',
+  I: 'text-cyan-400',
   N: 'text-white',
-  G: 'text-red-400',
-  O: 'text-red-500',
+  G: 'text-yellow-400',
+  O: 'text-orange-400',
 }
 
 export default function NumberCaller({ calledNumbers, currentNumber, isPlaying }) {
@@ -20,7 +20,7 @@ export default function NumberCaller({ calledNumbers, currentNumber, isPlaying }
   const recent = [...calledNumbers].slice(-10).reverse()
 
   return (
-    <div className="bg-black border border-red-900 rounded-xl p-4 flex flex-col items-center gap-4">
+    <div className="bg-gray-950 border border-gray-700 rounded-xl p-4 flex flex-col items-center gap-4">
       {/* Current called number */}
       <div className="flex flex-col items-center">
         <span className="text-gray-500 text-xs uppercase tracking-widest mb-1">Called Number</span>
@@ -29,11 +29,11 @@ export default function NumberCaller({ calledNumbers, currentNumber, isPlaying }
             <span className={`text-4xl font-bold ${COLUMN_COLORS[col] || 'text-white'}`}>
               {col}
             </span>
-            <span className="text-7xl font-black text-white leading-none">{currentNumber}</span>
+            <span className="text-7xl font-black text-cyan-400 leading-none">{currentNumber}</span>
           </div>
         ) : (
           <div className="flex flex-col items-center opacity-30">
-            <span className="text-4xl font-bold text-red-500">-</span>
+            <span className="text-4xl font-bold text-cyan-400">-</span>
             <span className="text-7xl font-black text-white leading-none">--</span>
           </div>
         )}
@@ -42,7 +42,10 @@ export default function NumberCaller({ calledNumbers, currentNumber, isPlaying }
       {/* Call count */}
       <div className="text-gray-500 text-sm">
         {calledNumbers.length > 0 ? (
-          <span><span className="text-red-400 font-bold">{calledNumbers.length}</span> / 75 called</span>
+          <span>
+            <span className="text-cyan-400 font-bold">{calledNumbers.length}</span>
+            <span className="text-gray-600"> / {MAX_CALLS} called</span>
+          </span>
         ) : (
           <span>No numbers called yet</span>
         )}
@@ -61,7 +64,7 @@ export default function NumberCaller({ calledNumbers, currentNumber, isPlaying }
                   className={`
                     text-xs font-bold px-2 py-1 rounded border
                     ${i === 0
-                      ? 'bg-red-700 border-red-500 text-white'
+                      ? 'bg-cyan-700 border-cyan-500 text-white'
                       : 'bg-gray-900 border-gray-700 text-gray-400'}
                   `}
                 >

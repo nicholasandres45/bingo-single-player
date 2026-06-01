@@ -184,9 +184,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col w-full">
       {/* Header */}
-      <div className="bg-gray-950 border-b border-red-900 px-4 py-3 flex items-center justify-between">
+      <div className="bg-gray-950 border-b border-gray-800 px-4 py-3 flex items-center justify-between">
         <div>
-          <h1 className="text-red-500 font-black text-2xl tracking-widest">BINGO</h1>
+          <h1 className="text-cyan-400 font-black text-2xl tracking-widest">BINGO</h1>
           <p className="text-gray-600 text-xs">{roundId || sessionId}</p>
         </div>
         <div className={`
@@ -194,8 +194,8 @@ export default function App() {
           ${gameActive
             ? 'bg-green-950 text-green-400 border-green-700'
             : gameOver
-            ? 'bg-red-950 text-red-400 border-red-700'
-            : 'bg-gray-900 text-gray-500 border-gray-700'}
+            ? 'bg-gray-900 text-gray-500 border-gray-700'
+            : 'bg-green-950 text-green-400 border-green-700'}
         `}>
           {gameActive ? 'IN PROGRESS' : gameOver ? 'GAME OVER' : 'BETTING OPEN'}
         </div>
@@ -213,7 +213,7 @@ export default function App() {
       {/* Player Cards */}
       {cards.length > 0 && (
         <div className="px-4 pt-4">
-          <p className="text-gray-500 text-xs uppercase tracking-widest mb-2">Your Cards</p>
+          <p className="text-cyan-400 text-xs uppercase tracking-widest font-semibold mb-2">Your Cards</p>
           <div className="flex flex-col gap-3">
             {cards.map((card, i) => (
               <BingoCard
@@ -237,7 +237,7 @@ export default function App() {
               className={`
                 flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-all
                 ${activeTab === i
-                  ? 'text-red-400 border-b-2 border-red-500'
+                  ? 'text-cyan-400 border-b-2 border-cyan-500'
                   : 'text-gray-600 hover:text-gray-400'}
               `}
             >

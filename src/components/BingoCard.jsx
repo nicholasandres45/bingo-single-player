@@ -1,11 +1,11 @@
 import { getMarkedPositions, COLUMNS_LIST } from '../utils/bingoUtils'
 
 const COLUMN_COLORS = {
-  B: 'text-red-500',
-  I: 'text-red-400',
+  B: 'text-blue-500',
+  I: 'text-cyan-400',
   N: 'text-white',
-  G: 'text-red-400',
-  O: 'text-red-500',
+  G: 'text-yellow-400',
+  O: 'text-orange-400',
 }
 
 export default function BingoCard({ card, calledNumbers, winPositions = [] }) {
@@ -13,13 +13,13 @@ export default function BingoCard({ card, calledNumbers, winPositions = [] }) {
   const winSet = new Set(winPositions)
 
   return (
-    <div className="bg-gray-900 border border-red-900 rounded-xl overflow-hidden select-none">
+    <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden select-none">
       {/* Column headers */}
-      <div className="grid grid-cols-5 border-b border-red-900">
+      <div className="grid grid-cols-5 border-b border-gray-700">
         {COLUMNS_LIST.map(col => (
           <div
             key={col}
-            className={`text-center py-2 font-bold text-lg ${COLUMN_COLORS[col]} bg-black`}
+            className={`text-center py-2 font-bold text-lg ${COLUMN_COLORS[col]} bg-gray-950`}
           >
             {col}
           </div>
@@ -43,27 +43,23 @@ export default function BingoCard({ card, calledNumbers, winPositions = [] }) {
                   relative flex items-center justify-center
                   h-12 text-sm font-semibold border border-gray-800
                   transition-all duration-200
-                  ${isWin ? 'bg-red-600 text-white' : ''}
-                  ${isMarked && !isWin && !isFree ? 'bg-red-950' : ''}
+                  ${isWin ? 'bg-cyan-500 text-white' : ''}
+                  ${isMarked && !isWin && !isFree ? 'bg-cyan-950' : ''}
                   ${!isMarked && !isFree ? 'bg-gray-900 text-gray-300' : ''}
-                  ${isFree && !isWin ? 'bg-red-800 text-white' : ''}
+                  ${isFree && !isWin ? 'bg-cyan-800 text-white' : ''}
                 `}
               >
                 {isMarked && !isFree && (
                   <div className={`
                     absolute inset-1 rounded-full flex items-center justify-center
-                    ${isWin ? 'bg-red-500' : 'bg-red-700'}
+                    ${isWin ? 'bg-cyan-400' : 'bg-cyan-600'}
                     pop-in
                   `}>
                     <span className="text-white text-xs font-bold">{val}</span>
                   </div>
                 )}
-                {!isMarked && !isFree && (
-                  <span>{val}</span>
-                )}
-                {isFree && (
-                  <span className="text-xs font-bold text-white">FREE</span>
-                )}
+                {!isMarked && !isFree && <span>{val}</span>}
+                {isFree && <span className="text-xs font-bold text-white">FREE</span>}
               </div>
             )
           })

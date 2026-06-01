@@ -37,8 +37,8 @@ body {
 }
 
 @keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-  50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(6, 182, 212, 0); }
 }
 
 .pop-in {

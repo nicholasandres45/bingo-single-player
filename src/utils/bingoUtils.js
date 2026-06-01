@@ -40,8 +40,10 @@ export function generateCallSequence() {
     const j = randomInt(0, i)
     ;[all[i], all[j]] = [all[j], all[i]]
   }
-  return all
+  return all.slice(0, 25)
 }
+
+export const MAX_CALLS = 25
 
 export function getColumnForNumber(num) {
   if (num >= 1 && num <= 15) return 'B'
@@ -127,10 +129,10 @@ export function calculatePayout(betAmount, winType, callCount) {
 
   if (winType === 'Full House') {
     let multiplier = 100
-    if (callCount <= 30) multiplier = 500
-    else if (callCount <= 40) multiplier = 400
-    else if (callCount <= 50) multiplier = 300
-    else if (callCount <= 60) multiplier = 200
+    if (callCount <= 10) multiplier = 500
+    else if (callCount <= 15) multiplier = 400
+    else if (callCount <= 20) multiplier = 300
+    else multiplier = 200
     return betAmount * multiplier
   }
 
