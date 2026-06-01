@@ -56,6 +56,7 @@ export default function App() {
   const [winInfo, setWinInfo]             = useState(null)
   const [loseInfo, setLoseInfo]           = useState(null)
   const [winPositions, setWinPositions]   = useState([])
+  const [takenCardIds, setTakenCardIds]   = useState(new Set())
 
   const wonRef       = useRef(false)
   const intervalRef  = useRef(null)
@@ -137,6 +138,7 @@ export default function App() {
     if (data) {
       setRound(data)
       fetchMyBets(data.round_id)
+      fetchTakenCards(data.round_id)
     } else {
       createNewRound()
     }
@@ -149,6 +151,16 @@ export default function App() {
       .eq('round_id', roundId)
       .eq('player_id', playerId)
     setMyBets(data || [])
+  }
+
+  async function fetchTakenCards(roundId) {
+    const { data } = await supabase
+      .from('round_bets')
+      .select('card_ids')
+      .eq('round_id', roundId)
+    if (data) {
+      setTakenCardIds(new Set(data.flatMap(b => b.card_ids)))
+    }
   }
 
   function subscribeToUpdates() {
@@ -169,8 +181,20 @@ export default function App() {
           setCurrentNumber(null)
           setWinInfo(null)
           setWinPositions([])
+          setTakenCardIds(new Set())
           wonRef.current = false
         }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'round_bets' }, payload => {
+        const bet = payload.new
+        if (!bet) return
+        const r = roundRef.current
+        if (!r || r.round_id !== bet.round_id) return
+        setTakenCardIds(prev => {
+          const next = new Set(prev)
+          bet.card_ids.forEach(id => next.add(id))
+          return next
+        })
       })
       .subscribe()
   }
@@ -189,6 +213,7 @@ export default function App() {
       setCurrentNumber(null)
       setWinInfo(null)
       setWinPositions([])
+      setTakenCardIds(new Set())
       wonRef.current = false
     } else if (error) {
       setTimeout(fetchCurrentRound, 600)
@@ -404,24 +429,12 @@ export default function App() {
       if (elapsed >= COUNTDOWN_SECS * 1000) return
     }
 
-    // First bet on this round sets start_time
-    if (!r.start_time) {
-      const { data: updated } = await supabase
-        .from('game_rounds')
-        .update({ start_time: new Date().toISOString() })
-        .eq('round_id', r.round_id)
-        .is('start_time', null)
-        .select()
-        .single()
-      if (updated) { setRound(updated); r = updated }
-    }
-
     // Deduct wallet
     const newBal = wallet.balance - totalCost
     await supabase.from('wallets').update({ balance: newBal }).eq('player_id', playerId)
     setBalance(newBal)
 
-    // Insert bet
+    // Insert bet (DB trigger increments player_count and total_pot)
     const { data: bet } = await supabase.from('round_bets').insert({
       round_id: r.round_id,
       player_id: playerId,
@@ -433,17 +446,40 @@ export default function App() {
     if (bet) setMyBets(prev => [...prev, bet])
     setSelectedCardIds(new Set())
     setActiveTab(1)
+
+    // Re-fetch round to get updated player_count from trigger.
+    // Start countdown only when 2+ players have bet.
+    const { data: freshRound } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .eq('round_id', r.round_id)
+      .single()
+
+    if (freshRound) {
+      setRound(freshRound)
+      if (freshRound.player_count >= 2 && !freshRound.start_time) {
+        const { data: started } = await supabase
+          .from('game_rounds')
+          .update({ start_time: new Date().toISOString() })
+          .eq('round_id', r.round_id)
+          .is('start_time', null)
+          .select()
+          .single()
+        if (started) setRound(started)
+      }
+    }
   }, [selectedCardIds, bettingOpen, totalCost, betAmount, playerId]) // eslint-disable-line
 
   const toggleCard = useCallback((id, forceRemove = false) => {
     if (!bettingOpen) return
+    if (!forceRemove && takenCardIds.has(id)) return
     setSelectedCardIds(prev => {
       const next = new Set(prev)
       if (forceRemove || next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
-  }, [bettingOpen])
+  }, [bettingOpen, takenCardIds])
 
   const handlePlayAgain = () => {
     setWinInfo(null); setLoseInfo(null); setCalledNumbers([])
@@ -585,6 +621,7 @@ export default function App() {
                 onBet={handleBet}
                 phase={phase}                     countdown={countdown}
                 balance={balance}                 playerCount={round?.player_count ?? 0}
+                takenCardIds={takenCardIds}        myCardIds={myCardIds}
               />
             )}
             {activeTab === 1 && (

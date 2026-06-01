@@ -8,6 +8,7 @@ export default function BuyCards({
   selectedCardIds, onToggleCard,
   possibleWin, totalCost,
   onBet, phase, countdown, balance, playerCount,
+  takenCardIds = new Set(), myCardIds = new Set(),
 }) {
   const cardNumbers = useMemo(() => Array.from({ length: TOTAL_CARDS }, (_, i) => i), [])
 
@@ -112,18 +113,25 @@ export default function BuyCards({
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="grid grid-cols-6 gap-1">
           {cardNumbers.map(i => {
-            const sel = selectedCardIds.has(i)
+            const sel    = selectedCardIds.has(i)
+            const mine   = myCardIds.has(i)
+            const taken  = takenCardIds.has(i)
+            const locked = !bettingOpen || taken
             return (
               <button
                 key={i}
                 onClick={() => onToggleCard(i)}
-                disabled={!bettingOpen}
+                disabled={locked}
                 className={`
                   h-5 rounded font-mono-nums text-[8px] font-semibold transition-all
-                  ${sel
-                    ? 'bg-cyan-600 text-white shadow-[0_0_5px_rgba(6,182,212,0.35)] border border-cyan-400/40'
-                    : 'bg-gray-900/80 text-gray-500 border border-gray-800/50 hover:border-cyan-800/60'}
-                  ${!bettingOpen ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
+                  ${mine
+                    ? 'bg-cyan-900/50 text-cyan-700 border border-cyan-900/50 cursor-not-allowed'
+                    : sel
+                      ? 'bg-cyan-600 text-white shadow-[0_0_5px_rgba(6,182,212,0.35)] border border-cyan-400/40'
+                      : taken
+                        ? 'bg-gray-900/30 text-gray-700 border border-gray-800/20 opacity-30 cursor-not-allowed'
+                        : 'bg-gray-900/80 text-gray-500 border border-gray-800/50 hover:border-cyan-800/60'}
+                  ${!locked && !mine ? 'cursor-pointer active:scale-95' : ''}
                 `}
               >
                 {i + 1}
