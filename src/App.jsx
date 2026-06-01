@@ -346,25 +346,28 @@ export default function App() {
 
     recordedRef.current.add(r.round_id)
 
-    // Credit wallet
+    const bets = myBetsRef.current
+    const stakeReturn = bets.reduce((s, b) => s + b.total_cost, 0)
+    const totalReturn = win.payout + stakeReturn
+
+    // Credit wallet: win payout + stake return
     const { data: w } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
     if (w) {
-      const newBal = w.balance + win.payout
+      const newBal = w.balance + totalReturn
       await supabase.from('wallets').update({ balance: newBal }).eq('player_id', playerId)
       setBalance(newBal)
     }
 
-    setWinInfo(win)
+    setWinInfo({ ...win, stakeReturn, totalReturn })
     setWinPositions(win.positions || [])
     setActiveTab(1)
 
-    const bets = myBetsRef.current
     setBetHistory(h => [{
       roundId: r.round_id, status: 'won',
       betAmount: bets[0]?.bet_amount,
       cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
       possibleWin: r.possible_win, winType: win.winType,
-      payout: win.payout, callCount: win.callCount,
+      payout: win.payout, stakeReturn, totalReturn, callCount: win.callCount,
     }, ...h])
 
     setTimeout(() => {
@@ -616,8 +619,9 @@ export default function App() {
 
       {winInfo && (
         <WinModal
-          winType={winInfo.winType}     payout={winInfo.payout}
-          callCount={winInfo.callCount} onClose={() => setWinInfo(null)}
+          winType={winInfo.winType}       payout={winInfo.payout}
+          stakeReturn={winInfo.stakeReturn} totalReturn={winInfo.totalReturn}
+          callCount={winInfo.callCount}   onClose={() => setWinInfo(null)}
           onPlayAgain={handlePlayAgain}
         />
       )}
