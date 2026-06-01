@@ -139,6 +139,7 @@ export default function App() {
     setSelectedCardIds(new Set())
     wonRef.current = false
     fetchTakenCards(newRound.round_id)
+    fetchMyBets(newRound.round_id)
   }
 
   async function fetchCurrentRound() {
@@ -151,6 +152,21 @@ export default function App() {
       .single()
 
     if (data) {
+      // If all numbers have already been called but the round was never closed
+      // (e.g. the tab was closed mid-game), finalize it and start fresh
+      if (data.start_time) {
+        const callStart = new Date(data.start_time).getTime() + COUNTDOWN_SECS * 1000
+        const maxGameMs = MAX_CALLS * CALL_INTERVAL_MS + 3000 // small buffer
+        if (Date.now() > callStart + maxGameMs) {
+          await supabase.from('game_rounds')
+            .update({ status: 'finished' })
+            .eq('round_id', data.round_id)
+            .in('status', ['waiting', 'active'])
+          createNewRound()
+          return
+        }
+      }
+
       const prev = roundRef.current
       if (!prev || prev.round_id !== data.round_id) {
         resetForNewRound(data)
