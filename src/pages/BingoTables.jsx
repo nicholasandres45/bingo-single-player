@@ -12,7 +12,7 @@ export default function BingoTables({ cards, calledNumbers, winPositions }) {
   }
 
   return (
-    <div className="p-2 flex flex-col gap-3">
+    <div className="px-3 py-3 flex flex-col gap-3">
       {cards.map((card, i) => (
         <BingoCard
           key={i}

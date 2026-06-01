@@ -13,11 +13,11 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
   const totalCost = betAmount * cardCount
 
   return (
-    <div className="flex flex-col gap-3 p-2.5">
+    <div className="flex flex-col gap-3 px-3 py-3">
 
       {/* Bet Amount */}
       <div>
-        <p className="text-cyan-400 text-[10px] uppercase tracking-widest font-semibold mb-1.5">
+        <p className="text-cyan-400 text-[9px] uppercase tracking-[0.15em] font-semibold mb-2">
           Bet Amount (ETB)
         </p>
         <div className="grid grid-cols-2 gap-1.5">
@@ -27,10 +27,10 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
               onClick={() => setBetAmount(amt)}
               disabled={gameActive}
               className={`
-                py-2 rounded-lg font-display text-xl tracking-wider transition-all
+                py-1.5 rounded-lg font-mono-nums text-base font-semibold transition-all
                 ${betAmount === amt
-                  ? 'bg-cyan-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                  : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-cyan-800'}
+                  ? 'bg-cyan-600/90 text-white shadow-[0_0_14px_rgba(6,182,212,0.35)] border border-cyan-500/50'
+                  : 'bg-gray-900 text-gray-400 border border-gray-700/60 hover:border-cyan-700/60'}
                 ${gameActive ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
               `}
             >
@@ -42,7 +42,7 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
 
       {/* Number of Cards */}
       <div>
-        <p className="text-gray-500 text-[10px] uppercase tracking-widest font-medium mb-1.5">
+        <p className="text-gray-500 text-[9px] uppercase tracking-[0.15em] font-semibold mb-2">
           Number of Cards
         </p>
         <div className="flex gap-1.5">
@@ -52,10 +52,10 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
               onClick={() => setCardCount(n)}
               disabled={gameActive}
               className={`
-                flex-1 py-1.5 rounded-lg font-display text-lg tracking-wider transition-all
+                flex-1 py-1.5 rounded-lg font-mono-nums text-sm font-semibold transition-all
                 ${cardCount === n
-                  ? 'bg-cyan-600 text-white shadow-[0_0_10px_rgba(6,182,212,0.35)]'
-                  : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-cyan-800'}
+                  ? 'bg-cyan-600/90 text-white shadow-[0_0_12px_rgba(6,182,212,0.3)] border border-cyan-500/50'
+                  : 'bg-gray-900 text-gray-400 border border-gray-700/60 hover:border-cyan-700/60'}
                 ${gameActive ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
               `}
             >
@@ -66,9 +66,9 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
       </div>
 
       {/* Total Cost */}
-      <div className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 border border-gray-800">
-        <span className="text-gray-500 text-xs font-medium">Total Cost</span>
-        <span className="font-display text-lg text-yellow-400 tracking-wider">{totalCost} ETB</span>
+      <div className="flex justify-between items-center bg-gray-900/60 rounded-xl px-3 py-2 border border-gray-800/60">
+        <span className="text-gray-500 text-[10px] font-semibold tracking-wide">Total Cost</span>
+        <span className="font-mono-nums text-sm font-bold text-yellow-400">{totalCost} ETB</span>
       </div>
 
       {/* Buy Button */}
@@ -76,28 +76,28 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
         onClick={onBuyCards}
         disabled={gameActive}
         className={`
-          w-full py-3 rounded-xl font-display text-2xl tracking-[0.12em] transition-all
+          w-full py-2.5 rounded-xl font-display text-base tracking-[0.12em] transition-all
           ${gameActive
-            ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-            : 'bg-gradient-to-r from-cyan-600 to-cyan-500 text-white cursor-pointer active:scale-95 shadow-[0_4px_20px_rgba(6,182,212,0.35)]'}
+            ? 'bg-gray-800/80 text-gray-600 cursor-not-allowed'
+            : 'bg-gradient-to-r from-cyan-700 to-cyan-500 text-white cursor-pointer active:scale-95 shadow-[0_4px_18px_rgba(6,182,212,0.3)]'}
         `}
       >
-        {gameActive ? 'IN PROGRESS' : 'BUY CARDS'}
+        {gameActive ? 'In Progress' : 'Buy Cards'}
       </button>
 
       {/* Potential Wins */}
       <div>
-        <p className="text-cyan-400 text-[10px] uppercase tracking-widest font-semibold mb-1.5">
+        <p className="text-cyan-400 text-[9px] uppercase tracking-[0.15em] font-semibold mb-2">
           Potential Wins
         </p>
-        <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+        <div className="bg-gray-900/60 rounded-xl border border-gray-800/60 overflow-hidden">
           {WINS(betAmount).map(({ label, val, special }, i) => (
             <div
               key={label}
-              className={`flex justify-between items-center px-2.5 py-1.5 ${i < 4 ? 'border-b border-gray-800' : ''}`}
+              className={`flex justify-between items-center px-3 py-1.5 ${i < 4 ? 'border-b border-gray-800/50' : ''}`}
             >
-              <span className="text-gray-400 text-[11px] font-medium">{label}</span>
-              <span className={`font-display text-sm tracking-wide ${special ? 'text-yellow-400' : 'text-green-400'}`}>
+              <span className="text-gray-400 text-[10px] font-medium">{label}</span>
+              <span className={`font-mono-nums text-[10px] font-semibold ${special ? 'text-yellow-400' : 'text-green-400'}`}>
                 {val}
               </span>
             </div>

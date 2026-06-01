@@ -20,10 +20,10 @@ export default function NumberBoard({ calledNumbers }) {
   const calledSet = new Set(calledNumbers)
 
   return (
-    <div className="px-1.5 py-1">
+    <div className="py-1">
       <div className="grid grid-cols-5 gap-[2px]">
         {COLUMNS_LIST.map(col => (
-          <div key={col} className={`text-center font-bold text-[11px] pb-0.5 font-display ${COLUMN_COLORS[col]}`}>
+          <div key={col} className={`text-center font-bold text-[10px] pb-0.5 font-display tracking-widest ${COLUMN_COLORS[col]}`}>
             {col}
           </div>
         ))}

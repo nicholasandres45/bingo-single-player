@@ -124,70 +124,73 @@ export default function App() {
     <div className="h-screen bg-black text-white flex flex-col w-full overflow-hidden">
 
       {/* ── Header ── */}
-      <div className="bg-gray-950 border-b border-gray-800 px-3 py-1.5 flex items-center justify-between shrink-0">
+      <div className="bg-gray-950 border-b border-gray-800/60 px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-baseline gap-2">
-          <h1 className="font-display text-2xl text-cyan-400">BINGO</h1>
-          <span className="text-gray-700 text-[10px] font-mono-nums">{roundId || sessionId}</span>
+          <h1 className="font-display text-xl text-cyan-400 tracking-widest">BINGO</h1>
+          <span className="text-gray-700 text-[9px] font-mono-nums">{roundId || sessionId}</span>
         </div>
         <span className={`
-          px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border
-          ${gameActive  ? 'bg-green-950 text-green-400 border-green-800'
-          : gameOver    ? 'bg-gray-900  text-gray-500  border-gray-700'
-          :               'bg-green-950 text-green-400 border-green-800'}
+          px-2.5 py-0.5 rounded-full text-[9px] font-semibold tracking-wider border
+          ${gameActive  ? 'bg-green-950/80 text-green-400 border-green-800'
+          : gameOver    ? 'bg-gray-900    text-gray-500  border-gray-700'
+          :               'bg-green-950/80 text-green-400 border-green-800'}
         `}>
           {gameActive ? 'In Progress' : gameOver ? 'Game Over' : 'Betting Open'}
         </span>
       </div>
 
       {/* ── Two-column body ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden gap-0">
 
-        {/* LEFT */}
-        <div className="w-[44%] border-r border-gray-800 flex flex-col overflow-hidden">
+        {/* ── LEFT ── */}
+        <div className="w-[44%] border-r border-gray-800/60 flex flex-col overflow-hidden">
 
           {/* Called number */}
-          <div className="px-2 py-1.5 border-b border-gray-800 flex flex-col items-center gap-0.5 shrink-0">
-            <span className="text-gray-600 text-[9px] uppercase tracking-widest font-medium">Called</span>
+          <div className="px-3 py-2 border-b border-gray-800/60 flex flex-col items-center gap-1 shrink-0">
+            <span className="text-gray-600 text-[9px] uppercase tracking-widest font-semibold">Called</span>
             {currentNumber ? (
-              <div key={animKey} className="call-bounce flex items-end gap-0.5 leading-none">
-                <span className={`font-display text-xl leading-none ${COL_COLORS[col] || 'text-white'}`}>{col}</span>
-                <span className="font-display text-5xl leading-none text-cyan-400" style={{ textShadow: '0 0 20px rgba(6,182,212,0.6)' }}>
+              <div key={animKey} className="call-bounce flex items-end gap-1 leading-none">
+                <span className={`font-display text-lg leading-none ${COL_COLORS[col] || 'text-white'}`}>{col}</span>
+                <span className="font-mono-nums text-4xl font-black leading-none text-cyan-400"
+                  style={{ textShadow: '0 0 18px rgba(6,182,212,0.55)' }}>
                   {currentNumber}
                 </span>
               </div>
             ) : (
-              <div className="flex items-end gap-0.5 leading-none opacity-20">
-                <span className="font-display text-xl text-cyan-400">-</span>
-                <span className="font-display text-5xl text-white">--</span>
+              <div className="flex items-end gap-1 leading-none opacity-20">
+                <span className="font-display text-lg text-cyan-400">—</span>
+                <span className="font-mono-nums text-4xl font-black text-white">--</span>
               </div>
             )}
-            <span className="text-[10px] font-mono-nums mt-0.5">
+            <span className="text-[9px] font-mono-nums mt-0.5">
               <span className="text-cyan-400 font-bold">{calledNumbers.length}</span>
               <span className="text-gray-700"> / {MAX_CALLS}</span>
             </span>
           </div>
 
           {/* Number board */}
-          <div className="shrink-0">
+          <div className="shrink-0 px-2 pt-1.5">
             <NumberBoard calledNumbers={calledNumbers} />
           </div>
 
           {/* Payout table */}
-          <div className="mx-1.5 mt-1 bg-gray-900/80 rounded-lg border border-gray-800 shrink-0">
-            <p className="text-gray-600 text-[9px] uppercase tracking-widest font-semibold text-center pt-1.5 pb-1">
+          <div className="mx-2 mt-2 bg-gray-900/60 rounded-xl border border-gray-800/60 shrink-0">
+            <p className="font-display text-[9px] text-gray-500 tracking-widest text-center pt-2 pb-1">
               Payout Table
             </p>
-            <div className="pb-1">
+            <div className="pb-1.5">
               {[
-                ['One Line',    '10X'],
-                ['Four Corners','10X'],
-                ['Diagonal',    '15X'],
-                ['Two Lines',   '25X'],
-                ['Full House',  '100–500X', true],
+                ['One Line',     '10X'],
+                ['Four Corners', '10X'],
+                ['Diagonal',     '15X'],
+                ['Two Lines',    '25X'],
+                ['Full House',   '100–500X', true],
               ].map(([label, mult, special]) => (
-                <div key={label} className="flex justify-between items-center px-2 py-[3px]">
-                  <span className="text-gray-500 text-[9px]">{label}</span>
-                  <span className={`font-display text-xs tracking-wide ${special ? 'text-yellow-400' : 'text-cyan-400'}`}>{mult}</span>
+                <div key={label} className="flex justify-between items-center px-3 py-[3px]">
+                  <span className="text-gray-500 text-[9px] font-medium">{label}</span>
+                  <span className={`font-mono-nums text-[10px] font-semibold ${special ? 'text-yellow-400' : 'text-cyan-400'}`}>
+                    {mult}
+                  </span>
                 </div>
               ))}
             </div>
@@ -195,12 +198,12 @@ export default function App() {
 
           {/* Recent rounds */}
           {betHistory.length > 0 && (
-            <div className="mx-1.5 mt-1.5 shrink-0">
-              <p className="text-gray-700 text-[9px] uppercase tracking-widest mb-1">Recent</p>
+            <div className="mx-2 mt-2 shrink-0">
+              <p className="text-gray-700 text-[9px] uppercase tracking-widest font-semibold mb-1">Recent</p>
               {betHistory.slice(0, 3).map((b, i) => (
-                <div key={i} className="flex justify-between items-center py-[3px] border-b border-gray-900">
-                  <span className="text-gray-700 text-[9px] font-mono-nums truncate max-w-[80px]">{b.roundId}</span>
-                  <span className={`text-[9px] font-semibold font-mono-nums ${b.status === 'won' ? 'text-green-400' : 'text-gray-700'}`}>
+                <div key={i} className="flex justify-between items-center py-1 border-b border-gray-900">
+                  <span className="text-gray-700 text-[9px] font-mono-nums truncate max-w-[70px]">{b.roundId}</span>
+                  <span className={`text-[9px] font-bold font-mono-nums ${b.status === 'won' ? 'text-green-400' : 'text-gray-700'}`}>
                     {b.status === 'won' ? `+${b.payout}` : 'Lost'}
                   </span>
                 </div>
@@ -209,21 +212,21 @@ export default function App() {
           )}
         </div>
 
-        {/* RIGHT */}
+        {/* ── RIGHT ── */}
         <div className="w-[56%] flex flex-col overflow-hidden">
 
           {/* Tab bar */}
-          <div className="flex border-b border-gray-800 shrink-0">
+          <div className="flex border-b border-gray-800/60 shrink-0">
             {TABS.map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
                 className={`
-                  flex-1 py-1.5 text-[9px] font-semibold uppercase tracking-wider leading-tight transition-all
+                  flex-1 px-1 py-2 text-[9px] font-semibold uppercase tracking-wider leading-tight transition-all
                   ${activeTab === i ? 'text-cyan-400 border-b-2 border-cyan-500' : 'text-gray-600 hover:text-gray-400'}
                 `}
               >
-                {tab.split(' ').map((w, j) => <span key={j} className="block">{w}</span>)}
+                {tab.split(' ').map((w, j) => <span key={j} className="block text-center">{w}</span>)}
               </button>
             ))}
           </div>

@@ -10,7 +10,7 @@ export default function MyBets({ betHistory }) {
   }
 
   return (
-    <div className="p-2 flex flex-col gap-2">
+    <div className="px-3 py-3 flex flex-col gap-2">
       {betHistory.map((bet, i) => (
         <div key={i} className="bg-gray-900 border border-gray-800 rounded-lg p-2.5">
           <div className="flex justify-between items-center mb-1.5">
