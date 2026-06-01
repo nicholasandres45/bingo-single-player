@@ -8,7 +8,7 @@ export default function WinModal({
   const [visible, setVisible] = useState(false)
   useEffect(() => { setTimeout(() => setVisible(true), 50) }, [])
 
-  const multiCard  = winCount > 1
+  const multiCard    = winCount > 1
   const displayTotal = totalReturn ?? payout
 
   return (
@@ -23,14 +23,13 @@ export default function WinModal({
           {winType === 'Full House' ? 'FULL HOUSE!' : `${winType}!`}
         </h2>
         <p className="text-gray-500 text-xs mb-3">
-          {multiCard && <span className="text-cyan-400 font-semibold">{winCount} cards</span>}
-          {multiCard && ' · '}
+          {multiCard && <><span className="text-cyan-400 font-semibold">{winCount} cards</span> · </>}
           completed in <span className="text-white font-semibold">{callCount}</span> calls
         </p>
 
         <div className="bg-black/60 rounded-xl p-3 mb-4 border border-cyan-900/50 flex flex-col gap-2 text-left">
 
-          {/* Per-card win (show if multi-card) */}
+          {/* Per-card breakdown */}
           {multiCard && payoutPerCard > 0 && (
             <div className="flex items-center justify-between gap-2">
               <span className="text-gray-500 text-[10px] uppercase tracking-wider">Per Card</span>
@@ -40,9 +39,9 @@ export default function WinModal({
             </div>
           )}
 
-          {/* Win payout */}
+          {/* Opponents' money won */}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-gray-500 text-[10px] uppercase tracking-wider">Win Payout</span>
+            <span className="text-gray-500 text-[10px] uppercase tracking-wider">Winnings</span>
             <span className="font-mono-nums text-sm font-bold text-green-400">
               +{payout.toLocaleString()} ETB
             </span>
@@ -59,26 +58,13 @@ export default function WinModal({
           )}
 
           {/* Total */}
-          {stakeReturn > 0 && (
-            <>
-              <div className="h-px bg-gray-800/60" />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold">Total</span>
-                <span className="font-display text-2xl text-green-400 tracking-wider">
-                  +{displayTotal.toLocaleString()} ETB
-                </span>
-              </div>
-            </>
-          )}
-
-          {/* Fallback single line */}
-          {!stakeReturn && (
-            <div className="text-center">
-              <p className="font-display text-4xl text-green-400 tracking-wider">
-                +{payout.toLocaleString()} ETB
-              </p>
-            </div>
-          )}
+          <div className="h-px bg-gray-800/60" />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-gray-300 text-[10px] uppercase tracking-wider font-semibold">Total</span>
+            <span className="font-display text-2xl text-green-400 tracking-wider">
+              +{displayTotal.toLocaleString()} ETB
+            </span>
+          </div>
         </div>
 
         <div className="flex gap-2">

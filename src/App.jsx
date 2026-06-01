@@ -278,7 +278,7 @@ export default function App() {
             order.indexOf(b.winType) > order.indexOf(a.winType) ? b : a
           ).winType
           const pw = roundRef.current?.possible_win ?? 0
-          const payoutPerCard = calculatePayout(pw, bestType)
+          const payoutPerCard = calculatePayout(pw)
           const totalPayout   = payoutPerCard * winners.length
 
           wonRef.current = true
@@ -551,29 +551,6 @@ export default function App() {
           {/* Number board */}
           <div className="shrink-0 px-2 pt-1.5">
             <NumberBoard calledNumbers={calledNumbers} />
-          </div>
-
-          {/* Payout table */}
-          <div className="mx-2 mt-2 bg-gray-900/60 rounded-xl border border-gray-800/60 shrink-0">
-            <p className="font-display text-[9px] text-gray-500 tracking-widest text-center pt-2 pb-1">
-              Payout Table
-            </p>
-            <div className="pb-1.5">
-              {[
-                ['One Line',     '10%'],
-                ['Four Corners', '15%'],
-                ['Diagonal',     '20%'],
-                ['Two Lines',    '35%'],
-                ['Full House',   '100%', true],
-              ].map(([label, pct, special]) => (
-                <div key={label} className="flex items-center justify-between gap-1 px-3 py-[3px]">
-                  <span className="text-gray-500 text-[9px] font-medium flex-1 min-w-0">{label}</span>
-                  <span className={`font-mono-nums text-[9px] font-semibold shrink-0 ${special ? 'text-yellow-400' : 'text-cyan-400'}`}>
-                    {pct}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Recent rounds */}

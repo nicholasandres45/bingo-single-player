@@ -90,15 +90,8 @@ export function calculatePossibleWin(betAmount) {
   return Math.floor(betAmount * TOTAL_CARDS * (1 - PLATFORM_CUT))
 }
 
-export function calculatePayout(possibleWin, winType) {
-  const portions = {
-    'One Line':     0.10,
-    'Four Corners': 0.15,
-    'Diagonal':     0.20,
-    'Two Lines':    0.35,
-    'Full House':   1.00,
-  }
-  return Math.floor(possibleWin * (portions[winType] || 0))
+export function calculatePayout(possibleWin) {
+  return possibleWin
 }
 
 export function getColumnForNumber(num) {
