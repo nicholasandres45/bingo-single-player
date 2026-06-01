@@ -34,9 +34,19 @@ export default function MyBets({ betHistory }) {
           <div className="flex items-center justify-between gap-2">
             <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Bet</span>
             <span className="font-mono-nums text-[10px] text-gray-300 font-semibold shrink-0">
-              {bet.betAmount} ETB × {bet.cardCount}
+              {bet.betAmount} ETB × {bet.cardCount} card{bet.cardCount > 1 ? 's' : ''}
             </span>
           </div>
+
+          {/* Possible win */}
+          {bet.possibleWin > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Possible Win</span>
+              <span className="font-mono-nums text-[10px] text-yellow-400 font-semibold shrink-0">
+                {bet.possibleWin.toLocaleString()} ETB
+              </span>
+            </div>
+          )}
 
           {/* Win type */}
           {bet.winType && (
