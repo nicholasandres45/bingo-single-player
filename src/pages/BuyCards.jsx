@@ -66,9 +66,9 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
       </div>
 
       {/* Total Cost */}
-      <div className="flex justify-between items-center bg-gray-900/60 rounded-xl px-3 py-2 border border-gray-800/60">
-        <span className="text-gray-500 text-[10px] font-semibold tracking-wide">Total Cost</span>
-        <span className="font-mono-nums text-sm font-bold text-yellow-400">{totalCost} ETB</span>
+      <div className="flex items-center justify-between gap-2 bg-gray-900/60 rounded-xl px-3 py-2 border border-gray-800/60">
+        <span className="text-gray-500 text-[10px] font-semibold tracking-wide flex-1 min-w-0">Total Cost</span>
+        <span className="font-mono-nums text-sm font-bold text-yellow-400 shrink-0">{totalCost} ETB</span>
       </div>
 
       {/* Buy Button */}
@@ -94,10 +94,10 @@ export default function BuyCards({ betAmount, setBetAmount, cardCount, setCardCo
           {WINS(betAmount).map(({ label, val, special }, i) => (
             <div
               key={label}
-              className={`flex justify-between items-center px-3 py-1.5 ${i < 4 ? 'border-b border-gray-800/50' : ''}`}
+              className={`flex items-center justify-between gap-2 px-3 py-2 ${i < 4 ? 'border-b border-gray-800/50' : ''}`}
             >
-              <span className="text-gray-400 text-[10px] font-medium">{label}</span>
-              <span className={`font-mono-nums text-[10px] font-semibold ${special ? 'text-yellow-400' : 'text-green-400'}`}>
+              <span className="text-gray-400 text-[10px] font-medium flex-1 min-w-0 truncate">{label}</span>
+              <span className={`font-mono-nums text-[9px] font-semibold shrink-0 ${special ? 'text-yellow-400' : 'text-green-400'}`}>
                 {val}
               </span>
             </div>

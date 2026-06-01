@@ -140,10 +140,10 @@ export default function App() {
       </div>
 
       {/* ── Two-column body ── */}
-      <div className="flex flex-1 overflow-hidden gap-0">
+      <div className="flex flex-1 overflow-hidden">
 
         {/* ── LEFT ── */}
-        <div className="w-[44%] border-r border-gray-800/60 flex flex-col overflow-hidden">
+        <div className="w-[44%] flex flex-col overflow-hidden pr-2">
 
           {/* Called number */}
           <div className="px-3 py-2 border-b border-gray-800/60 flex flex-col items-center gap-1 shrink-0">
@@ -186,9 +186,9 @@ export default function App() {
                 ['Two Lines',    '25X'],
                 ['Full House',   '100–500X', true],
               ].map(([label, mult, special]) => (
-                <div key={label} className="flex justify-between items-center px-3 py-[3px]">
-                  <span className="text-gray-500 text-[9px] font-medium">{label}</span>
-                  <span className={`font-mono-nums text-[10px] font-semibold ${special ? 'text-yellow-400' : 'text-cyan-400'}`}>
+                <div key={label} className="flex items-center justify-between gap-1 px-3 py-[3px]">
+                  <span className="text-gray-500 text-[9px] font-medium flex-1 min-w-0">{label}</span>
+                  <span className={`font-mono-nums text-[9px] font-semibold shrink-0 ${special ? 'text-yellow-400' : 'text-cyan-400'}`}>
                     {mult}
                   </span>
                 </div>
@@ -201,9 +201,9 @@ export default function App() {
             <div className="mx-2 mt-2 shrink-0">
               <p className="text-gray-700 text-[9px] uppercase tracking-widest font-semibold mb-1">Recent</p>
               {betHistory.slice(0, 3).map((b, i) => (
-                <div key={i} className="flex justify-between items-center py-1 border-b border-gray-900">
-                  <span className="text-gray-700 text-[9px] font-mono-nums truncate max-w-[70px]">{b.roundId}</span>
-                  <span className={`text-[9px] font-bold font-mono-nums ${b.status === 'won' ? 'text-green-400' : 'text-gray-700'}`}>
+                <div key={i} className="flex items-center justify-between gap-1 py-1 border-b border-gray-900">
+                  <span className="text-gray-700 text-[9px] font-mono-nums truncate flex-1 min-w-0">{b.roundId}</span>
+                  <span className={`text-[9px] font-bold font-mono-nums shrink-0 ${b.status === 'won' ? 'text-green-400' : 'text-gray-700'}`}>
                     {b.status === 'won' ? `+${b.payout}` : 'Lost'}
                   </span>
                 </div>
@@ -212,8 +212,11 @@ export default function App() {
           )}
         </div>
 
+        {/* Divider */}
+        <div className="w-px shrink-0 bg-gray-800/50 self-stretch mx-1" />
+
         {/* ── RIGHT ── */}
-        <div className="w-[56%] flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden pl-1">
 
           {/* Tab bar */}
           <div className="flex border-b border-gray-800/60 shrink-0">
