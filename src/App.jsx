@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+
+const tg = window.Telegram?.WebApp
 import BingoCard from './components/BingoCard'
 import NumberCaller from './components/NumberCaller'
 import WinModal from './components/WinModal'
@@ -32,6 +34,16 @@ export default function App() {
   const [roundId, setRoundId] = useState(null)
   const [winPositions, setWinPositions] = useState([])
   const [sessionId] = useState(() => `BSP-${Date.now().toString(36).toUpperCase()}`)
+
+  // Initialize Telegram Mini App
+  useEffect(() => {
+    if (tg) {
+      tg.ready()
+      tg.expand()
+      tg.setHeaderColor('#000000')
+      tg.setBackgroundColor('#000000')
+    }
+  }, [])
 
   const intervalRef = useRef(null)
   const wonRef = useRef(false)
@@ -170,7 +182,7 @@ export default function App() {
   useEffect(() => () => clearInterval(intervalRef.current), [])
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col max-w-md mx-auto">
+    <div className="min-h-screen bg-black text-white flex flex-col w-full">
       {/* Header */}
       <div className="bg-gray-950 border-b border-red-900 px-4 py-3 flex items-center justify-between">
         <div>
