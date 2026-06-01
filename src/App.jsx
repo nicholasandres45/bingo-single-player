@@ -257,44 +257,28 @@ export default function App() {
       setCalledNumbers([...called])
       setCurrentNumber(seq[clamped] ?? null)
 
-      // Win check — evaluate every bet card, collect all winners
+      // Win check — first card to complete any pattern wins the full prize pool
       if (!wonRef.current && roundRef.current?.status !== 'finished') {
-        const cards  = allCardsRef.current
+        const cards   = allCardsRef.current
         const cardIds = [...new Set(myBetsRef.current.flatMap(b => b.card_ids))]
-        const order  = ['One Line', 'Four Corners', 'Diagonal', 'Two Lines', 'Full House']
-        const winners = []
+        const order   = ['One Line', 'Four Corners', 'Diagonal', 'Two Lines', 'Full House']
 
         for (const cid of cardIds) {
           if (!cards?.[cid]) continue
           const marked = getMarkedPositions(cards[cid], called)
           const wins   = checkWinPatterns(marked)
           if (wins.length > 0) {
-            const best = wins.reduce((a, b) => order.indexOf(b.type) > order.indexOf(a.type) ? b : a)
-            winners.push({ cardId: cid, winType: best.type, positions: best.positions })
+            const best   = wins.reduce((a, b) => order.indexOf(b.type) > order.indexOf(a.type) ? b : a)
+            const payout = roundRef.current?.possible_win ?? 0 // full prize pool
+
+            wonRef.current = true
+            clearInterval(intervalRef.current)
+            doWin({
+              cardId: cid, winType: best.type,
+              payout, positions: best.positions, callCount: clamped + 1,
+            })
+            return
           }
-        }
-
-        if (winners.length > 0) {
-          // Best win type across all winning cards — each card earns that same payout
-          const bestType = winners.reduce((a, b) =>
-            order.indexOf(b.winType) > order.indexOf(a.winType) ? b : a
-          ).winType
-          const pw = roundRef.current?.possible_win ?? 0
-          const payoutPerCard = calculatePayout(pw)
-          const totalPayout   = payoutPerCard * winners.length
-
-          wonRef.current = true
-          clearInterval(intervalRef.current)
-          doWin({
-            cardId: winners[0].cardId,
-            winType: bestType,
-            payout: totalPayout,
-            payoutPerCard,
-            winCount: winners.length,
-            positions: winners[0].positions,
-            callCount: clamped + 1,
-          })
-          return
         }
       }
 
@@ -371,29 +355,25 @@ export default function App() {
 
     recordedRef.current.add(r.round_id)
 
-    const bets = myBetsRef.current
-    const stakeReturn = bets.reduce((s, b) => s + b.total_cost, 0)
-    const totalReturn = win.payout + stakeReturn
-
-    // Credit wallet: win payout + stake return
+    // Credit wallet: winner gets the full prize pool (stake already inside it)
     const { data: w } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
     if (w) {
-      const newBal = w.balance + totalReturn
+      const newBal = w.balance + win.payout
       await supabase.from('wallets').update({ balance: newBal }).eq('player_id', playerId)
       setBalance(newBal)
     }
 
-    setWinInfo({ ...win, stakeReturn, totalReturn })
+    setWinInfo(win)
     setWinPositions(win.positions || [])
     setActiveTab(1)
 
+    const bets = myBetsRef.current
     setBetHistory(h => [{
       roundId: r.round_id, status: 'won',
       betAmount: bets[0]?.bet_amount,
       cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
       possibleWin: r.possible_win, winType: win.winType,
-      payout: win.payout, payoutPerCard: win.payoutPerCard, winCount: win.winCount,
-      stakeReturn, totalReturn, callCount: win.callCount,
+      payout: win.payout, callCount: win.callCount,
     }, ...h])
 
     setTimeout(() => {
@@ -622,10 +602,8 @@ export default function App() {
 
       {winInfo && (
         <WinModal
-          winType={winInfo.winType}         payout={winInfo.payout}
-          payoutPerCard={winInfo.payoutPerCard} winCount={winInfo.winCount}
-          stakeReturn={winInfo.stakeReturn} totalReturn={winInfo.totalReturn}
-          callCount={winInfo.callCount}     onClose={() => setWinInfo(null)}
+          winType={winInfo.winType} payout={winInfo.payout}
+          callCount={winInfo.callCount} onClose={() => setWinInfo(null)}
           onPlayAgain={handlePlayAgain}
         />
       )}

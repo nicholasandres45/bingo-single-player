@@ -56,35 +56,13 @@ export default function MyBets({ betHistory }) {
             </div>
           )}
 
-          {/* Payout + stake return */}
-          {bet.status === 'won' && (
-            <div className="pt-1 border-t border-gray-800/60 flex flex-col gap-1">
-              {bet.winCount > 1 && bet.payoutPerCard > 0 && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Per Card</span>
-                  <span className="font-mono-nums text-[10px] font-semibold text-cyan-400 shrink-0">
-                    {bet.payoutPerCard.toLocaleString()} × {bet.winCount}
-                  </span>
-                </div>
-              )}
-              {bet.payout > 0 && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Win Payout</span>
-                  <span className="font-mono-nums text-[10px] font-semibold text-green-400 shrink-0">+{bet.payout.toLocaleString()} ETB</span>
-                </div>
-              )}
-              {bet.stakeReturn > 0 && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Stake Return</span>
-                  <span className="font-mono-nums text-[10px] font-semibold text-cyan-400 shrink-0">+{bet.stakeReturn.toLocaleString()} ETB</span>
-                </div>
-              )}
-              {bet.totalReturn > 0 && (
-                <div className="flex items-center justify-between gap-2 pt-0.5 border-t border-gray-800/40">
-                  <span className="text-gray-400 text-[10px] font-semibold flex-1 min-w-0">Total Return</span>
-                  <span className="font-mono-nums text-[11px] font-bold text-green-400 shrink-0">+{bet.totalReturn.toLocaleString()} ETB</span>
-                </div>
-              )}
+          {/* Payout */}
+          {bet.payout > 0 && (
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-800/60">
+              <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Won</span>
+              <span className="font-mono-nums text-[11px] font-bold text-green-400 shrink-0">
+                +{bet.payout.toLocaleString()} ETB
+              </span>
             </div>
           )}
 
