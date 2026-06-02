@@ -7,13 +7,13 @@ export default function LoseModal({ callCount, onClose, onPlayAgain }) {
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-5">
       <div className={`
-        bg-[#0d1117] border border-gray-800/60 rounded-3xl p-6 max-w-[300px] w-full text-center
+        bg-[#0d1117] border border-gray-800/60 rounded-3xl p-7 max-w-[300px] w-full text-center
         shadow-[0_0_40px_rgba(0,0,0,0.5)] transition-all duration-400
         ${visible ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-4'}
       `}>
 
         {/* Icon */}
-        <div className="w-14 h-14 rounded-full bg-red-500/8 border border-red-900/40 flex items-center justify-center mx-auto mb-4">
+        <div className="w-14 h-14 rounded-full bg-red-500/8 border border-red-900/40 flex items-center justify-center mx-auto mb-5">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-red-500">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -21,13 +21,13 @@ export default function LoseModal({ callCount, onClose, onPlayAgain }) {
         </div>
 
         {/* Title */}
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-red-500/70 mb-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-red-500/70 mb-2">
           Round Over
         </p>
-        <h2 className="text-2xl font-bold text-white tracking-tight leading-tight mb-1">
+        <h2 className="text-2xl font-bold text-white tracking-tight leading-tight mb-3">
           No Luck
         </h2>
-        <p className="text-[11px] text-gray-500 mb-6">
+        <p className="text-[12px] text-gray-500 mb-7 leading-relaxed">
           {callCount
             ? <>All <span className="text-gray-300 font-semibold">{callCount}</span> numbers were called</>
             : 'Another player won this round'}

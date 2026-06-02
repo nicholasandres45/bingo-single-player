@@ -70,7 +70,7 @@ export default function MyBets({ betHistory }) {
           {bet.callCount > 0 && (
             <div className="flex items-center justify-between gap-2">
               <span className="text-gray-500 text-[10px] font-medium flex-1 min-w-0">Calls</span>
-              <span className="font-mono-nums text-[9px] text-gray-600 shrink-0">{bet.callCount} / 25</span>
+              <span className="font-mono-nums text-[9px] text-gray-600 shrink-0">{bet.callCount} / 75</span>
             </div>
           )}
         </div>
