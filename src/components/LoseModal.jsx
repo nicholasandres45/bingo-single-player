@@ -5,35 +5,50 @@ export default function LoseModal({ callCount, onClose, onPlayAgain }) {
   useEffect(() => { setTimeout(() => setVisible(true), 50) }, [])
 
   return (
-    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-5">
       <div className={`
-        bg-gray-950 border border-red-900/50 rounded-2xl p-6 max-w-[280px] w-full text-center
-        shadow-[0_0_30px_rgba(220,38,38,0.12)] transition-all duration-300
-        ${visible ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}
+        bg-[#0d1117] border border-gray-800/60 rounded-3xl p-6 max-w-[300px] w-full text-center
+        shadow-[0_0_40px_rgba(0,0,0,0.5)] transition-all duration-400
+        ${visible ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-4'}
       `}>
-        <div className="text-5xl mb-2">😔</div>
-        <h2 className="font-display text-3xl text-red-400 tracking-widest mb-1">
-          NO LUCK
+
+        {/* Icon */}
+        <div className="w-14 h-14 rounded-full bg-red-500/8 border border-red-900/40 flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-red-500">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </div>
+
+        {/* Title */}
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-red-500/70 mb-1">
+          Round Over
+        </p>
+        <h2 className="text-2xl font-bold text-white tracking-tight leading-tight mb-1">
+          No Luck
         </h2>
-        <p className="text-gray-500 text-xs mb-6">
+        <p className="text-[11px] text-gray-500 mb-6">
           {callCount
-            ? <>All <span className="text-white font-semibold">{callCount}</span> numbers called</>
+            ? <>All <span className="text-gray-300 font-semibold">{callCount}</span> numbers were called</>
             : 'Another player won this round'}
         </p>
+
+        {/* Buttons */}
         <div className="flex gap-2">
           <button
             onClick={onPlayAgain}
-            className="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-display text-xl tracking-wider rounded-xl transition-all active:scale-95"
+            className="flex-1 py-2.5 bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white text-sm font-bold tracking-wide rounded-xl transition-all active:scale-95"
           >
-            TRY AGAIN
+            Try Again
           </button>
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-400 font-display text-xl tracking-wider rounded-xl transition-all"
+            className="flex-1 py-2.5 border border-gray-700 hover:border-gray-600 text-gray-400 hover:text-gray-300 text-sm font-medium rounded-xl transition-all active:scale-95"
           >
-            CLOSE
+            Close
           </button>
         </div>
+
       </div>
     </div>
   )
