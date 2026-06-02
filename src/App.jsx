@@ -17,6 +17,7 @@ import {
   TOTAL_CARDS,
 } from './utils/bingoUtils'
 import { supabase } from './lib/supabase'
+import { walletGetUser, walletDebit, walletCredit, walletRollback } from './lib/walletApi'
 
 const tg = window.Telegram?.WebApp
 const TABS = ['BUY CARDS', 'BINGO TABLES', 'MY BETS']
@@ -29,17 +30,26 @@ const COL_COLORS = {
   G: 'text-yellow-400', O: 'text-orange-400',
 }
 
-function getPlayerId() {
-  let id = localStorage.getItem(PLAYER_ID_KEY)
-  if (!id) {
-    id = `P${Date.now().toString(36).toUpperCase()}`
-    localStorage.setItem(PLAYER_ID_KEY, id)
+function decodeJwt(token) {
+  try { return JSON.parse(atob(token.split('.')[1])) } catch { return null }
+}
+
+function getPlayerInfo() {
+  const params = new URLSearchParams(window.location.search)
+  const token  = params.get('token')
+  const chatId = params.get('chatId')
+  if (token && chatId) {
+    const payload = decodeJwt(token)
+    return { token, chatId, username: payload?.username || `user_${chatId}` }
   }
-  return id
+  // Fallback for local dev (no bot URL params)
+  let id = localStorage.getItem(PLAYER_ID_KEY)
+  if (!id) { id = `TEST${Date.now().toString(36).toUpperCase()}`; localStorage.setItem(PLAYER_ID_KEY, id) }
+  return { token: null, chatId: id, username: 'tester' }
 }
 
 export default function App() {
-  const [playerId]          = useState(getPlayerId)
+  const [playerInfo]        = useState(getPlayerInfo)
   const [balance, setBalance] = useState(null)
   const [round, setRound]   = useState(null)
   const [myBets, setMyBets] = useState([])
@@ -60,14 +70,15 @@ export default function App() {
 
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem('bingo_muted') === 'true')
 
-  const wonRef       = useRef(false)
-  const intervalRef  = useRef(null)
-  const ctdwnRef     = useRef(null)
-  const roundRef     = useRef(null)
-  const myBetsRef    = useRef([])
-  const allCardsRef  = useRef(null)
-  const recordedRef  = useRef(new Set())
-  const isMutedRef   = useRef(isMuted)
+  const wonRef         = useRef(false)
+  const intervalRef    = useRef(null)
+  const ctdwnRef       = useRef(null)
+  const roundRef       = useRef(null)
+  const myBetsRef      = useRef([])
+  const allCardsRef    = useRef(null)
+  const recordedRef    = useRef(new Set())
+  const isMutedRef     = useRef(isMuted)
+  const playerInfoRef  = useRef(playerInfo)
 
   useEffect(() => { roundRef.current = round }, [round])
   useEffect(() => { myBetsRef.current = myBets }, [myBets])
@@ -141,12 +152,20 @@ export default function App() {
   }, []) // eslint-disable-line
 
   async function initWallet() {
-    await supabase.from('wallets').upsert(
-      { player_id: playerId, balance: 500 },
-      { onConflict: 'player_id', ignoreDuplicates: true }
-    )
-    const { data } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
-    if (data) setBalance(data.balance)
+    const { token, chatId } = playerInfoRef.current
+    if (token) {
+      // Live: fetch balance from external wallet API
+      const user = await walletGetUser(chatId, token)
+      if (user) setBalance(user.balance)
+    } else {
+      // Dev fallback: use Supabase wallets table
+      await supabase.from('wallets').upsert(
+        { player_id: chatId, balance: 500 },
+        { onConflict: 'player_id', ignoreDuplicates: true }
+      )
+      const { data } = await supabase.from('wallets').select('balance').eq('player_id', chatId).single()
+      if (data) setBalance(data.balance)
+    }
   }
 
   // ── Shared reset helper ──────────────────────────────────────
@@ -208,7 +227,7 @@ export default function App() {
       .from('round_bets')
       .select('id, card_ids, bet_amount, total_cost')
       .eq('round_id', roundId)
-      .eq('player_id', playerId)
+      .eq('player_id', playerInfo.chatId)
     setMyBets(data || [])
   }
 
@@ -310,6 +329,14 @@ export default function App() {
               .eq('round_id', r.round_id)
               .eq('status', 'waiting')
               .then(() => {})
+            // Refund any bet this player placed for the cancelled round
+            const bets = myBetsRef.current
+            const { token, chatId, username } = playerInfoRef.current
+            if (token && bets.length > 0) {
+              const totalBet = bets.reduce((s, b) => s + b.total_cost, 0)
+              walletRollback({ token, chatId, username, amount: totalBet, roundId: r.round_id })
+                .then(result => { if (result?.new_balance != null) setBalance(result.new_balance) })
+            }
           }
         }
       }
@@ -432,11 +459,13 @@ export default function App() {
     const r = roundRef.current
     if (!r) return
 
+    const { token, chatId, username } = playerInfoRef.current
+
     const { data } = await supabase
       .from('game_rounds')
       .update({
         status: 'finished',
-        winner_player_id: playerId,
+        winner_player_id: chatId,
         winner_card_id: win.cardId,
         winner_type: win.winType,
         winner_payout: win.payout,
@@ -450,12 +479,17 @@ export default function App() {
 
     recordedRef.current.add(r.round_id)
 
-    // Credit wallet: winner gets the full prize pool (stake already inside it)
-    const { data: w } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
-    if (w) {
-      const newBal = w.balance + win.payout
-      await supabase.from('wallets').update({ balance: newBal }).eq('player_id', playerId)
-      setBalance(newBal)
+    // Credit wallet: winner gets the full prize pool
+    if (token) {
+      const result = await walletCredit({ token, chatId, username, amount: win.payout, roundId: r.round_id })
+      if (result?.new_balance != null) setBalance(result.new_balance)
+    } else {
+      const { data: w } = await supabase.from('wallets').select('balance').eq('player_id', chatId).single()
+      if (w) {
+        const newBal = w.balance + win.payout
+        await supabase.from('wallets').update({ balance: newBal }).eq('player_id', chatId)
+        setBalance(newBal)
+      }
     }
 
     setWinInfo(win)
@@ -479,10 +513,10 @@ export default function App() {
   // ── Bet placement ────────────────────────────────────────────
   const handleBet = useCallback(async () => {
     if (selectedCardIds.size === 0 || !bettingOpen) return
+    // One bet per round per player (wallet API is one debit per round)
+    if (myBetsRef.current.length > 0) return
 
-    // Authoritative balance check
-    const { data: wallet } = await supabase.from('wallets').select('balance').eq('player_id', playerId).single()
-    if (!wallet || wallet.balance < totalCost) return
+    const { token, chatId, username } = playerInfoRef.current
 
     let r = roundRef.current
 
@@ -499,15 +533,23 @@ export default function App() {
       if (elapsed >= COUNTDOWN_SECS * 1000) return
     }
 
-    // Deduct wallet
-    const newBal = wallet.balance - totalCost
-    await supabase.from('wallets').update({ balance: newBal }).eq('player_id', playerId)
-    setBalance(newBal)
+    // Deduct via wallet API (live) or Supabase wallets (dev fallback)
+    if (token) {
+      const result = await walletDebit({ token, chatId, username, amount: totalCost, roundId: r.round_id })
+      if (!result) return
+      if (result.insufficientBalance) return
+      setBalance(result.new_balance)
+    } else {
+      const { data: wallet } = await supabase.from('wallets').select('balance').eq('player_id', chatId).single()
+      if (!wallet || wallet.balance < totalCost) return
+      await supabase.from('wallets').update({ balance: wallet.balance - totalCost }).eq('player_id', chatId)
+      setBalance(wallet.balance - totalCost)
+    }
 
     // Insert bet (DB trigger increments player_count and total_pot)
     const { data: bet } = await supabase.from('round_bets').insert({
       round_id: r.round_id,
-      player_id: playerId,
+      player_id: chatId,
       card_ids: [...selectedCardIds],
       bet_amount: betAmount,
       total_cost: totalCost,
@@ -538,7 +580,7 @@ export default function App() {
         if (started) setRound(started)
       }
     }
-  }, [selectedCardIds, bettingOpen, totalCost, betAmount, playerId]) // eslint-disable-line
+  }, [selectedCardIds, bettingOpen, totalCost, betAmount]) // eslint-disable-line
 
   const toggleCard = useCallback((id, forceRemove = false) => {
     if (!bettingOpen) return
