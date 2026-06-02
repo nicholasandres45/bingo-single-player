@@ -1,10 +1,7 @@
 import { useMemo } from 'react'
 import { TOTAL_CARDS } from '../utils/bingoUtils'
 
-const BET_AMOUNTS = [10, 20, 50, 100]
-
 export default function BuyCards({
-  betAmount, setBetAmount,
   selectedCardIds, onToggleCard,
   possibleWin, totalCost,
   onBet, phase, countdown, balance, playerCount,
@@ -57,29 +54,10 @@ export default function BuyCards({
         </div>
       )}
 
-      {/* Bet Amount */}
-      <div className="shrink-0">
-        <p className="text-cyan-400 text-[9px] uppercase tracking-[0.12em] font-semibold mb-1.5">
-          Bet Amount (ETB)
-        </p>
-        <div className="grid grid-cols-4 gap-1">
-          {BET_AMOUNTS.map(amt => (
-            <button
-              key={amt}
-              onClick={() => setBetAmount(amt)}
-              disabled={!bettingOpen}
-              className={`
-                py-1 rounded-lg font-mono-nums text-sm font-semibold transition-all
-                ${betAmount === amt
-                  ? 'bg-cyan-600/90 text-white shadow-[0_0_10px_rgba(6,182,212,0.3)] border border-cyan-500/50'
-                  : 'bg-gray-900 text-gray-400 border border-gray-700/50 hover:border-cyan-700/60'}
-                ${!bettingOpen ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
-              `}
-            >
-              {amt}
-            </button>
-          ))}
-        </div>
+      {/* Fixed stake notice */}
+      <div className="flex items-center justify-between bg-gray-900/60 rounded-lg px-3 py-1 border border-gray-800/60 shrink-0">
+        <span className="text-gray-500 text-[9px] font-medium">Stake per card</span>
+        <span className="font-mono-nums text-[10px] font-bold text-cyan-400">10 ETB</span>
       </div>
 
       {/* Card selection header */}

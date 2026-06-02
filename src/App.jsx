@@ -56,7 +56,7 @@ export default function App() {
   const [betHistory, setBetHistory] = useState([])
 
   const [activeTab, setActiveTab]   = useState(0)
-  const [betAmount, setBetAmount]   = useState(10)
+  const betAmount = 10
   const [selectedCardIds, setSelectedCardIds] = useState(new Set())
 
   const [countdown, setCountdown]         = useState(null)
@@ -745,7 +745,6 @@ export default function App() {
           <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === 0 && (
               <BuyCards
-                betAmount={betAmount}             setBetAmount={setBetAmount}
                 selectedCardIds={selectedCardIds} onToggleCard={toggleCard}
                 possibleWin={possibleWin}         totalCost={totalCost}
                 onBet={handleBet}
