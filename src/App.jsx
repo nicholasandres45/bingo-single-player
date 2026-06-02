@@ -729,7 +729,7 @@ export default function App() {
         <WinModal
           winType={winInfo.winType} payout={winInfo.payout}
           callCount={winInfo.callCount} onClose={() => setWinInfo(null)}
-          onPlayAgain={handlePlayAgain}
+          onPlayAgain={handlePlayAgain} isMuted={isMuted}
         />
       )}
 
@@ -737,7 +737,7 @@ export default function App() {
         <LoseModal
           callCount={loseInfo.callCount}
           onClose={() => setLoseInfo(null)}
-          onPlayAgain={handlePlayAgain}
+          onPlayAgain={handlePlayAgain} isMuted={isMuted}
         />
       )}
     </div>
