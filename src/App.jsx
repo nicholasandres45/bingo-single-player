@@ -236,14 +236,14 @@ export default function App() {
   async function fetchGlobalHistory() {
     const { data } = await supabase
       .from('game_rounds')
-      .select('round_id, winner_player_id, winner_payout, winner_type')
+      .select('round_id, winner_player_id, winner_username, winner_payout, winner_type')
       .eq('status', 'finished')
       .not('winner_player_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10)
     if (data) setGlobalHistory(data.map(r => ({
       roundId: r.round_id, winnerId: r.winner_player_id,
-      payout: r.winner_payout, winType: r.winner_type,
+      username: r.winner_username, payout: r.winner_payout, winType: r.winner_type,
     })))
   }
 
@@ -268,7 +268,7 @@ export default function App() {
         if (updated.status === 'finished' && updated.winner_player_id) {
           setGlobalHistory(prev => [{
             roundId: updated.round_id, winnerId: updated.winner_player_id,
-            payout: updated.winner_payout, winType: updated.winner_type,
+            username: updated.winner_username, payout: updated.winner_payout, winType: updated.winner_type,
           }, ...prev].slice(0, 10))
         }
 
@@ -489,6 +489,7 @@ export default function App() {
       .update({
         status: 'finished',
         winner_player_id: chatId,
+        winner_username: username,
         winner_card_id: win.cardId,
         winner_type: win.winType,
         winner_payout: win.payout,
@@ -733,7 +734,7 @@ export default function App() {
             ) : globalHistory.map((g, i) => (
               <div key={i} className="flex items-center justify-between gap-1 py-1 border-b border-gray-900/80">
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-gray-500 text-[8px] font-mono-nums truncate">#{String(g.winnerId).slice(-6)}</span>
+                  <span className="text-gray-500 text-[8px] truncate">@{g.username || String(g.winnerId).slice(-6)}</span>
                   <span className="text-gray-700 text-[7px] truncate">{g.winType}</span>
                 </div>
                 <span className="font-mono-nums text-[9px] font-bold text-emerald-400 shrink-0">+{(g.payout ?? 0).toLocaleString()}</span>
