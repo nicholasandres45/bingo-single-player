@@ -710,7 +710,7 @@ export default function App() {
         <div className="flex items-center gap-1.5">
           <span className="text-gray-600 text-[9px] uppercase tracking-widest font-semibold">Possible Win</span>
           <span className="text-gray-700 text-[9px]">·</span>
-          <span className="text-gray-600 text-[9px]">{takenCardIds.size} card{takenCardIds.size !== 1 ? 's' : ''} placed</span>
+          <span className="text-gray-600 text-[9px]">{Math.round((round?.total_pot ?? 0) / betAmount)} card{Math.round((round?.total_pot ?? 0) / betAmount) !== 1 ? 's' : ''} placed</span>
         </div>
         <span className="font-mono-nums text-base font-bold text-yellow-400"
           style={{ textShadow: '0 0 12px rgba(250,204,21,0.4)' }}>
@@ -799,7 +799,7 @@ export default function App() {
                 possibleWin={possibleWin}         totalCost={totalCost}
                 onBet={handleBet}
                 phase={phase}                     countdown={countdown}
-                balance={balance}                 cardCount={takenCardIds.size}
+                balance={balance}                 cardCount={Math.round((round?.total_pot ?? 0) / betAmount)}
                 takenCardIds={takenCardIds}        myCardIds={myCardIds}
               />
             )}
