@@ -273,10 +273,13 @@ export default function App() {
         const prev = roundRef.current
 
         if (updated.status === 'finished' && updated.winner_player_id) {
-          setGlobalHistory(prev => [{
-            roundId: updated.round_id, winnerId: updated.winner_player_id,
-            username: updated.winner_username, payout: updated.winner_payout, winType: updated.winner_type,
-          }, ...prev].slice(0, 10))
+          setGlobalHistory(prev => {
+            if (prev.some(g => g.roundId === updated.round_id)) return prev
+            return [{
+              roundId: updated.round_id, winnerId: updated.winner_player_id,
+              username: updated.winner_username, payout: updated.winner_payout, winType: updated.winner_type,
+            }, ...prev].slice(0, 10)
+          })
         }
 
         if (!prev || prev.round_id === updated.round_id) {
