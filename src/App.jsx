@@ -513,9 +513,8 @@ export default function App() {
   // ── Bet placement ────────────────────────────────────────────
   const handleBet = useCallback(async () => {
     if (selectedCardIds.size === 0 || !bettingOpen) return
-    // One bet per round per player (wallet API is one debit per round)
-    if (myBetsRef.current.length > 0) return
 
+    const isFirstBet = myBetsRef.current.length === 0
     const { token, chatId, username } = playerInfoRef.current
 
     let r = roundRef.current
@@ -527,10 +526,10 @@ export default function App() {
       if (!r) return
     }
 
-    // Double-check betting still open
+    // Double-check betting still open (block within last 3s of countdown)
     if (r.start_time) {
       const elapsed = Date.now() - new Date(r.start_time).getTime()
-      if (elapsed >= COUNTDOWN_SECS * 1000) return
+      if (elapsed >= (COUNTDOWN_SECS - 3) * 1000) return
     }
 
     // Deduct via wallet API (live) or Supabase wallets (dev fallback)
@@ -569,7 +568,7 @@ export default function App() {
 
     if (freshRound) {
       setRound(freshRound)
-      if (freshRound.player_count >= 2 && !freshRound.start_time) {
+      if (isFirstBet && freshRound.player_count >= 2 && !freshRound.start_time) {
         const { data: started } = await supabase
           .from('game_rounds')
           .update({ start_time: new Date().toISOString() })
@@ -661,7 +660,7 @@ export default function App() {
         <div className="flex items-center gap-1.5">
           <span className="text-gray-600 text-[9px] uppercase tracking-widest font-semibold">Possible Win</span>
           <span className="text-gray-700 text-[9px]">·</span>
-          <span className="text-gray-600 text-[9px]">{round?.player_count ?? 0} player{round?.player_count !== 1 ? 's' : ''}</span>
+          <span className="text-gray-600 text-[9px]">{takenCardIds.size} card{takenCardIds.size !== 1 ? 's' : ''} placed</span>
         </div>
         <span className="font-mono-nums text-base font-bold text-yellow-400"
           style={{ textShadow: '0 0 12px rgba(250,204,21,0.4)' }}>
@@ -749,7 +748,7 @@ export default function App() {
                 possibleWin={possibleWin}         totalCost={totalCost}
                 onBet={handleBet}
                 phase={phase}                     countdown={countdown}
-                balance={balance}                 playerCount={round?.player_count ?? 0}
+                balance={balance}                 cardCount={takenCardIds.size}
                 takenCardIds={takenCardIds}        myCardIds={myCardIds}
               />
             )}

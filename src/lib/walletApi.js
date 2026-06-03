@@ -34,7 +34,7 @@ export async function walletDebit({ token, chatId, username, amount, roundId }) 
         amount,
         game: 'Bingo',
         round_id: roundId,
-        transaction_id: `TXN_${todayStr()}_${roundId}_DEBIT_${chatId}`,
+        transaction_id: `TXN_${todayStr()}_${roundId}_DEBIT_${chatId}_${Date.now()}`,
       }),
     })
     const data = await res.json()

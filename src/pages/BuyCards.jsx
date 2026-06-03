@@ -4,7 +4,7 @@ import { TOTAL_CARDS } from '../utils/bingoUtils'
 export default function BuyCards({
   selectedCardIds, onToggleCard,
   possibleWin, totalCost,
-  onBet, phase, countdown, balance, playerCount,
+  onBet, phase, countdown, balance, cardCount,
   takenCardIds = new Set(), myCardIds = new Set(),
 }) {
   const cardNumbers = useMemo(() => Array.from({ length: TOTAL_CARDS }, (_, i) => i), [])
@@ -34,7 +34,7 @@ export default function BuyCards({
       {phase === 'countdown' && countdown !== null && (
         <div className="flex items-center justify-between bg-yellow-950/40 rounded-lg px-3 py-1 border border-yellow-800/40 shrink-0">
           <span className="text-yellow-600 text-[9px] font-medium flex-1 min-w-0">
-            Closes in · {playerCount} player{playerCount !== 1 ? 's' : ''}
+            Closes in · {cardCount} card{cardCount !== 1 ? 's' : ''} placed
           </span>
           <span className="font-mono-nums text-[10px] font-bold text-yellow-400 shrink-0">{countdown}s</span>
         </div>
@@ -42,7 +42,7 @@ export default function BuyCards({
       {phase === 'betting' && playerCount > 0 && (
         <div className="bg-cyan-950/30 rounded-lg px-3 py-1 border border-cyan-900/40 shrink-0">
           <span className="text-cyan-700 text-[9px] font-medium">
-            {playerCount} player{playerCount !== 1 ? 's' : ''} joined · bet to start countdown
+            {cardCount} card{cardCount !== 1 ? 's' : ''} placed · bet to start countdown
           </span>
         </div>
       )}
