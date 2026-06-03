@@ -380,7 +380,7 @@ export default function App() {
     }
 
     return () => clearInterval(ctdwnRef.current)
-  }, [round?.start_time, round?.status, round?.round_id, round?.player_count])
+  }, [round?.start_time, round?.status, round?.round_id]) // eslint-disable-line
 
   // ── Number calling ───────────────────────────────────────────
   useEffect(() => {
