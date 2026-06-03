@@ -53,7 +53,8 @@ export default function App() {
   const [balance, setBalance] = useState(null)
   const [round, setRound]   = useState(null)
   const [myBets, setMyBets] = useState([])
-  const [betHistory, setBetHistory] = useState([])
+  const [betHistory, setBetHistory]     = useState([])
+  const [globalHistory, setGlobalHistory] = useState([])
 
   const [activeTab, setActiveTab]   = useState(0)
   const betAmount = 10
@@ -147,6 +148,7 @@ export default function App() {
     if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor('#000000'); tg.setBackgroundColor('#000000') }
     initWallet()
     fetchCurrentRound()
+    fetchGlobalHistory()
     const ch = subscribeToUpdates()
     return () => { supabase.removeChannel(ch) }
   }, []) // eslint-disable-line
@@ -231,6 +233,20 @@ export default function App() {
     setMyBets(data || [])
   }
 
+  async function fetchGlobalHistory() {
+    const { data } = await supabase
+      .from('game_rounds')
+      .select('round_id, winner_player_id, winner_payout, winner_type')
+      .eq('status', 'finished')
+      .not('winner_player_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(10)
+    if (data) setGlobalHistory(data.map(r => ({
+      roundId: r.round_id, winnerId: r.winner_player_id,
+      payout: r.winner_payout, winType: r.winner_type,
+    })))
+  }
+
   async function fetchTakenCards(roundId) {
     const { data } = await supabase
       .from('round_bets')
@@ -248,6 +264,13 @@ export default function App() {
         const updated = payload.new
         if (!updated) return
         const prev = roundRef.current
+
+        if (updated.status === 'finished' && updated.winner_player_id) {
+          setGlobalHistory(prev => [{
+            roundId: updated.round_id, winnerId: updated.winner_player_id,
+            payout: updated.winner_payout, winType: updated.winner_type,
+          }, ...prev].slice(0, 10))
+        }
 
         if (!prev || prev.round_id === updated.round_id) {
           // Same round — just update status/fields
@@ -702,20 +725,21 @@ export default function App() {
             <NumberBoard calledNumbers={calledNumbers} />
           </div>
 
-          {/* Recent rounds */}
-          {betHistory.length > 0 && (
-            <div className="mx-2 mt-2 shrink-0">
-              <p className="text-gray-700 text-[9px] uppercase tracking-widest font-semibold mb-1">Recent</p>
-              {betHistory.slice(0, 3).map((b, i) => (
-                <div key={i} className="flex items-center justify-between gap-1 py-1 border-b border-gray-900">
-                  <span className="text-gray-700 text-[9px] font-mono-nums truncate flex-1 min-w-0">{b.roundId}</span>
-                  <span className={`text-[9px] font-bold font-mono-nums shrink-0 ${b.status === 'won' ? 'text-green-400' : 'text-gray-700'}`}>
-                    {b.status === 'won' ? `+${b.payout}` : 'Lost'}
-                  </span>
+          {/* Global recent winners */}
+          <div className="mx-2 mt-2 flex-1 overflow-y-auto min-h-0">
+            <p className="text-gray-700 text-[9px] uppercase tracking-widest font-semibold mb-1 sticky top-0 bg-transparent">Recent Winners</p>
+            {globalHistory.length === 0 ? (
+              <p className="text-gray-800 text-[8px] mt-1">No recent games</p>
+            ) : globalHistory.map((g, i) => (
+              <div key={i} className="flex items-center justify-between gap-1 py-1 border-b border-gray-900/80">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-gray-500 text-[8px] font-mono-nums truncate">#{String(g.winnerId).slice(-6)}</span>
+                  <span className="text-gray-700 text-[7px] truncate">{g.winType}</span>
                 </div>
-              ))}
-            </div>
-          )}
+                <span className="font-mono-nums text-[9px] font-bold text-emerald-400 shrink-0">+{(g.payout ?? 0).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Divider */}
