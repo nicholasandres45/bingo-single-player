@@ -213,16 +213,17 @@ export default function App() {
       .single()
 
     if (data) {
-      // If all numbers have already been called but the round was never closed
-      // (e.g. the tab was closed mid-game), finalize it and start fresh
-      if (data.start_time) {
+      // Only finalize a genuinely stale round that was mid-game (status=active)
+      // and whose call window has fully expired. Never touch waiting rounds —
+      // they may simply be in the countdown phase.
+      if (data.status === 'active' && data.start_time) {
         const callStart = new Date(data.start_time).getTime() + COUNTDOWN_SECS * 1000
         const maxGameMs = MAX_CALLS * CALL_INTERVAL_MS + 3000 // small buffer
         if (Date.now() > callStart + maxGameMs) {
           await supabase.from('game_rounds')
             .update({ status: 'finished' })
             .eq('round_id', data.round_id)
-            .in('status', ['waiting', 'active'])
+            .eq('status', 'active')
           createNewRound()
           return
         }
