@@ -40,7 +40,8 @@ function getPlayerInfo() {
   const chatId = params.get('chatId')
   if (token && chatId) {
     const payload = decodeJwt(token)
-    return { token, chatId, username: payload?.username || `user_${chatId}` }
+    const username = payload?.username || payload?.first_name || payload?.name || `user_${chatId}`
+    return { token, chatId, username }
   }
   // Fallback for local dev (no bot URL params)
   let id = localStorage.getItem(PLAYER_ID_KEY)
@@ -158,7 +159,11 @@ export default function App() {
     if (token) {
       // Live: fetch balance from external wallet API
       const user = await walletGetUser(chatId, token)
-      if (user) setBalance(user.balance)
+      if (user) {
+        setBalance(user.balance)
+        const apiUsername = user.username || user.first_name || user.name
+        if (apiUsername) playerInfoRef.current = { ...playerInfoRef.current, username: apiUsername }
+      }
     } else {
       // Dev fallback: use Supabase wallets table
       await supabase.from('wallets').upsert(
@@ -734,7 +739,7 @@ export default function App() {
             ) : globalHistory.map((g, i) => (
               <div key={i} className="flex items-center justify-between gap-1 py-1 border-b border-gray-900/80">
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-gray-500 text-[8px] truncate">@{g.username || String(g.winnerId).slice(-6)}</span>
+                  <span className="text-gray-500 text-[8px] truncate">{g.username ? `@${g.username}` : `Player #${String(g.winnerId).slice(-4)}`}</span>
                   <span className="text-gray-700 text-[7px] truncate">{g.winType}</span>
                 </div>
                 <span className="font-mono-nums text-[9px] font-bold text-emerald-400 shrink-0">+{(g.payout ?? 0).toLocaleString()}</span>
