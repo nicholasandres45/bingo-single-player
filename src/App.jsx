@@ -129,12 +129,14 @@ export default function App() {
   const phase = useMemo(() => {
     if (!round) return 'loading'
     if (round.status === 'finished') return 'finished'
-    if (round.status === 'active') return 'calling'
-    if (round.status === 'waiting') {
+    // For both waiting and active: honour the local clock for countdown display
+    // so clock-drift between clients doesn't cause the timer to vanish early
+    if (round.status === 'waiting' || round.status === 'active') {
       if (!round.start_time) return 'betting'
       const elapsed = Date.now() - new Date(round.start_time).getTime()
       if (elapsed < COUNTDOWN_SECS * 1000) return 'countdown'
-      return round.player_count >= 2 ? 'calling' : 'betting'
+      if (round.status === 'waiting') return round.player_count >= 2 ? 'calling' : 'betting'
+      return 'calling'
     }
     return 'betting'
   }, [round, countdown]) // countdown dep so phase refreshes every 500ms tick
@@ -340,7 +342,7 @@ export default function App() {
   useEffect(() => {
     clearInterval(ctdwnRef.current)
 
-    if (round?.start_time && round.status === 'waiting') {
+    if (round?.start_time && (round.status === 'waiting' || round.status === 'active')) {
       const tick = () => {
         const elapsed = Date.now() - new Date(round.start_time).getTime()
         const rem = Math.max(0, COUNTDOWN_SECS - Math.floor(elapsed / 1000))
