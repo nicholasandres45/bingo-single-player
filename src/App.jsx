@@ -280,6 +280,11 @@ export default function App() {
         if (!prev || prev.round_id === updated.round_id) {
           // Same round — just update status/fields
           setRound(updated)
+          // If new bets came in (pot or count changed), re-sync taken cards
+          // so card count stays in step with possible_win
+          if (prev && (updated.player_count !== prev.player_count || updated.total_pot !== prev.total_pot)) {
+            fetchTakenCards(updated.round_id)
+          }
         } else if (
           updated.status === 'waiting' &&
           new Date(updated.created_at) > new Date(prev.created_at ?? 0)
