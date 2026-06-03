@@ -130,9 +130,6 @@ export function checkWinPatterns(marked) {
   if (diag1.every(p => marked.has(p))) wins.push({ type: 'Diagonal', positions: diag1 })
   if (diag2.every(p => marked.has(p))) wins.push({ type: 'Diagonal', positions: diag2 })
 
-  const corners = ['0,0', '0,4', '4,0', '4,4']
-  if (corners.every(p => marked.has(p))) wins.push({ type: 'Four Corners', positions: corners })
-
   const completeRows = [0,1,2,3,4].filter(r => [0,1,2,3,4].every(c => marked.has(`${r},${c}`)))
   const completeCols = [0,1,2,3,4].filter(c => [0,1,2,3,4].every(r => marked.has(`${r},${c}`)))
   if (completeRows.length + completeCols.length >= 2)

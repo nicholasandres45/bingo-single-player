@@ -179,7 +179,17 @@ export default function App() {
 
   // ── Shared reset helper ──────────────────────────────────────
   function resetForNewRound(newRound) {
-    setRound(newRound)
+    // If start_time is set to a future value (DB column default), reset it to null
+    let r = newRound
+    if (r.start_time && new Date(r.start_time).getTime() > Date.now() + 5000) {
+      supabase.from('game_rounds')
+        .update({ start_time: null })
+        .eq('round_id', r.round_id)
+        .eq('status', 'waiting')
+        .then(() => {})
+      r = { ...r, start_time: null }
+    }
+    setRound(r)
     setMyBets([])
     setCalledNumbers([])
     setCurrentNumber(null)
@@ -330,7 +340,7 @@ export default function App() {
     const newId = `BNG${Date.now().toString(36).toUpperCase()}`
     const { data, error } = await supabase
       .from('game_rounds')
-      .insert({ round_id: newId, status: 'waiting' })
+      .insert({ round_id: newId, status: 'waiting', start_time: null })
       .select()
       .single()
     if (data) {
@@ -415,7 +425,7 @@ export default function App() {
       if (!wonRef.current && roundRef.current?.status !== 'finished') {
         const cards   = allCardsRef.current
         const cardIds = [...new Set(myBetsRef.current.flatMap(b => b.card_ids))]
-        const order   = ['One Line', 'Four Corners', 'Diagonal', 'Two Lines', 'Full House']
+        const order   = ['One Line', 'Diagonal', 'Two Lines', 'Full House']
 
         for (const cid of cardIds) {
           if (!cards?.[cid]) continue
