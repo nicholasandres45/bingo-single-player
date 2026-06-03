@@ -510,39 +510,37 @@ export default function App() {
 
     const { token, chatId, username } = playerInfoRef.current
 
-    const { data } = await supabase
-      .from('game_rounds')
-      .update({
-        status: 'finished',
-        winner_player_id: chatId,
-        winner_username: username,
-        winner_card_id: win.cardId,
-        winner_type: win.winType,
-        winner_payout: win.payout,
-      })
-      .eq('round_id', r.round_id)
-      .in('status', ['waiting', 'active'])
-      .select()
-      .single()
+    // Server-side validation: verifies card ownership, minimum call count,
+    // and takes payout from DB (not client-supplied) to prevent cheating
+    const { data, error } = await supabase.rpc('claim_bingo_win', {
+      p_round_id:   r.round_id,
+      p_player_id:  chatId,
+      p_username:   username,
+      p_card_id:    win.cardId,
+      p_win_type:   win.winType,
+      p_call_count: win.callCount,
+    })
 
-    if (!data) return // someone else got there first
+    if (error || !data?.success) return // rejected or someone else won first
+
+    const confirmedPayout = data.payout
 
     recordedRef.current.add(r.round_id)
 
-    // Credit wallet: winner gets the full prize pool
+    // Credit wallet with the DB-confirmed payout
     if (token) {
-      const result = await walletCredit({ token, chatId, username, amount: win.payout, roundId: r.round_id })
+      const result = await walletCredit({ token, chatId, username, amount: confirmedPayout, roundId: r.round_id })
       if (result?.new_balance != null) setBalance(result.new_balance)
     } else {
       const { data: w } = await supabase.from('wallets').select('balance').eq('player_id', chatId).single()
       if (w) {
-        const newBal = w.balance + win.payout
+        const newBal = w.balance + confirmedPayout
         await supabase.from('wallets').update({ balance: newBal }).eq('player_id', chatId)
         setBalance(newBal)
       }
     }
 
-    setWinInfo(win)
+    setWinInfo({ ...win, payout: confirmedPayout })
     setWinPositions(win.positions || [])
     setActiveTab(1)
 
@@ -552,7 +550,7 @@ export default function App() {
       betAmount: bets[0]?.bet_amount,
       cardCount: bets.reduce((s, b) => s + b.card_ids.length, 0),
       possibleWin: r.possible_win, winType: win.winType,
-      payout: win.payout, callCount: win.callCount,
+      payout: confirmedPayout, callCount: win.callCount,
     }, ...h])
 
     setTimeout(() => {
