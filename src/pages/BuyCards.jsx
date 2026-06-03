@@ -39,7 +39,7 @@ export default function BuyCards({
           <span className="font-mono-nums text-[10px] font-bold text-yellow-400 shrink-0">{countdown}s</span>
         </div>
       )}
-      {phase === 'betting' && playerCount > 0 && (
+      {phase === 'betting' && cardCount > 0 && (
         <div className="bg-cyan-950/30 rounded-lg px-3 py-1 border border-cyan-900/40 shrink-0">
           <span className="text-cyan-700 text-[9px] font-medium">
             {cardCount} card{cardCount !== 1 ? 's' : ''} placed · bet to start countdown
