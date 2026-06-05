@@ -46,7 +46,7 @@ export async function walletDebit({ token, chatId, username, amount, roundId }) 
     }
     return data
   } catch (e) {
-    return { error: true, message: 'Network error — check connection' }
+    return { error: true, message: e?.message || 'Network error' }
   }
 }
 
