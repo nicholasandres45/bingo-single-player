@@ -11,13 +11,13 @@ export default function BuyCards({
 
   const bettingOpen  = phase === 'betting' || phase === 'countdown'
   const hasSelection = selectedCardIds.size > 0
-  const canAfford    = balance !== null && balance >= totalCost && totalCost > 0
-  const canBet       = bettingOpen && hasSelection && canAfford
+  // If balance failed to load, still allow the attempt — wallet API validates on debit
+  const canAfford    = balance === null || (balance >= totalCost && totalCost > 0)
+  const canBet       = bettingOpen && hasSelection && totalCost > 0 && canAfford
 
-  const btnLabel = !bettingOpen    ? 'Betting Closed'
-    : !hasSelection                ? 'Select a Card'
-    : balance === null             ? 'Loading Balance…'
-    : !canAfford                   ? 'Insufficient Balance'
+  const btnLabel = !bettingOpen ? 'Betting Closed'
+    : !hasSelection              ? 'Select a Card'
+    : !canAfford                 ? 'Insufficient Balance'
     : `Place Bet · ${totalCost} ETB`
 
   return (
@@ -27,7 +27,7 @@ export default function BuyCards({
       <div className="flex items-center justify-between bg-gray-900/60 rounded-lg px-3 py-1 border border-gray-800/60 shrink-0">
         <span className="text-gray-500 text-[9px] font-medium">Balance</span>
         <span className="font-mono-nums text-[10px] font-bold text-yellow-400">
-          {balance !== null ? `${balance.toLocaleString()} ETB` : '...'}
+          {balance !== null ? `${balance.toLocaleString()} ETB` : '— tap header to refresh'}
         </span>
       </div>
 
