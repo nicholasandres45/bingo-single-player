@@ -34,6 +34,12 @@ function decodeJwt(token) {
   try { return JSON.parse(atob(token.split('.')[1])) } catch { return null }
 }
 
+function safeBalance(raw) {
+  if (raw == null) return null
+  const n = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(/,/g, ''))
+  return isFinite(n) && n >= 0 ? n : null
+}
+
 function getPlayerInfo() {
   const params = new URLSearchParams(window.location.search)
   const token  = params.get('token')
@@ -167,7 +173,8 @@ export default function App() {
         user = await walletGetUser(chatId, token)
       }
       if (user) {
-        setBalance(user.balance)
+        const bal = safeBalance(user.balance ?? user.available_balance ?? user.wallet_balance)
+        if (bal !== null) setBalance(bal)
         const apiUsername = user.username || user.first_name || user.name
         if (apiUsername) playerInfoRef.current = { ...playerInfoRef.current, username: apiUsername }
       }
@@ -535,7 +542,8 @@ export default function App() {
     // Credit wallet with the DB-confirmed payout
     if (token) {
       const result = await walletCredit({ token, chatId, username, amount: confirmedPayout, roundId: r.round_id })
-      if (result?.new_balance != null) setBalance(result.new_balance)
+      const creditBal = safeBalance(result?.new_balance ?? result?.balance)
+      if (creditBal !== null) setBalance(creditBal)
     } else {
       const { data: w } = await supabase.from('wallets').select('balance').eq('player_id', chatId).single()
       if (w) {
@@ -596,11 +604,12 @@ export default function App() {
         return
       }
       // Use whichever field the API returns; fall back to re-fetch
-      const newBal = result.new_balance ?? result.balance
-      if (newBal != null) setBalance(newBal)
+      const newBal = safeBalance(result.new_balance ?? result.balance)
+      if (newBal !== null) setBalance(newBal)
       else {
         const user = await walletGetUser(chatId, token)
-        if (user?.balance != null) setBalance(user.balance)
+        const bal = safeBalance(user?.balance ?? user?.available_balance)
+        if (bal !== null) setBalance(bal)
       }
     } else {
       const { data: wallet } = await supabase.from('wallets').select('balance').eq('player_id', chatId).single()
@@ -665,6 +674,16 @@ export default function App() {
     if (roundRef.current?.status === 'finished') fetchCurrentRound()
   }
 
+  async function refreshBalance() {
+    const { token, chatId } = playerInfoRef.current
+    if (!token) return
+    const user = await walletGetUser(chatId, token)
+    if (user) {
+      const bal = safeBalance(user.balance ?? user.available_balance ?? user.wallet_balance)
+      if (bal !== null) setBalance(bal)
+    }
+  }
+
   useEffect(() => () => {
     clearInterval(intervalRef.current)
     clearInterval(ctdwnRef.current)
@@ -682,11 +701,9 @@ export default function App() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {balance !== null && (
-            <span className="font-mono-nums text-[9px] font-bold text-yellow-400">
-              {balance.toLocaleString()} ETB
-            </span>
-          )}
+          <button onClick={refreshBalance} className="font-mono-nums text-[9px] font-bold text-yellow-400 active:opacity-60 transition-opacity">
+            {balance !== null ? `${balance.toLocaleString()} ETB` : '… ETB'}
+          </button>
           <button
             onClick={() => setIsMuted(m => !m)}
             className="p-1 rounded-lg text-gray-500 hover:text-gray-300 active:scale-90 transition-all shrink-0"
