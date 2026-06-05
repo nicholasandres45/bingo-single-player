@@ -160,7 +160,12 @@ export default function App() {
     const { token, chatId } = playerInfoRef.current
     if (token) {
       // Live: fetch balance from external wallet API
-      const user = await walletGetUser(chatId, token)
+      // Retry once — handles Render cold-start (first request can take 30-60s)
+      let user = await walletGetUser(chatId, token)
+      if (!user) {
+        await new Promise(res => setTimeout(res, 5000))
+        user = await walletGetUser(chatId, token)
+      }
       if (user) {
         setBalance(user.balance)
         const apiUsername = user.username || user.first_name || user.name
@@ -584,8 +589,19 @@ export default function App() {
     if (token) {
       const result = await walletDebit({ token, chatId, username, amount: totalCost, roundId: r.round_id })
       if (!result) return
-      if (result.insufficientBalance) return
-      setBalance(result.new_balance)
+      if (result.insufficientBalance) {
+        // Re-fetch authoritative balance so the UI reflects reality
+        const user = await walletGetUser(chatId, token)
+        if (user?.balance != null) setBalance(user.balance)
+        return
+      }
+      // Use whichever field the API returns; fall back to re-fetch
+      const newBal = result.new_balance ?? result.balance
+      if (newBal != null) setBalance(newBal)
+      else {
+        const user = await walletGetUser(chatId, token)
+        if (user?.balance != null) setBalance(user.balance)
+      }
     } else {
       const { data: wallet } = await supabase.from('wallets').select('balance').eq('player_id', chatId).single()
       if (!wallet || wallet.balance < totalCost) return

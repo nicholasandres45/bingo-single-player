@@ -16,6 +16,7 @@ export default function BuyCards({
 
   const btnLabel = !bettingOpen    ? 'Betting Closed'
     : !hasSelection                ? 'Select a Card'
+    : balance === null             ? 'Loading Balance…'
     : !canAfford                   ? 'Insufficient Balance'
     : `Place Bet · ${totalCost} ETB`
 
