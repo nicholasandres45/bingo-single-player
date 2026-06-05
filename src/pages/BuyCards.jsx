@@ -6,6 +6,7 @@ export default function BuyCards({
   possibleWin, totalCost,
   onBet, phase, countdown, balance, cardCount,
   takenCardIds = new Set(), myCardIds = new Set(),
+  betMsg = null,
 }) {
   const cardNumbers = useMemo(() => Array.from({ length: TOTAL_CARDS }, (_, i) => i), [])
 
@@ -119,6 +120,13 @@ export default function BuyCards({
           })}
         </div>
       </div>
+
+      {/* Error message */}
+      {betMsg && (
+        <div className="bg-red-950/60 border border-red-800/50 rounded-lg px-3 py-1.5 shrink-0">
+          <p className="text-red-400 text-[9px] font-medium text-center">{betMsg}</p>
+        </div>
+      )}
 
       {/* Place Bet button */}
       <button

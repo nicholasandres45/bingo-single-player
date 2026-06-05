@@ -37,11 +37,17 @@ export async function walletDebit({ token, chatId, username, amount, roundId }) 
         transaction_id: `TXN_${todayStr()}_${roundId}_DEBIT_${chatId}_${Date.now()}`,
       }),
     })
-    const data = await res.json()
+    let data = {}
+    try { data = await res.json() } catch { /* non-JSON response */ }
     if (res.status === 422) return { insufficientBalance: true }
-    if (!res.ok || !data.success) return null
+    if (!res.ok || !data.success) {
+      const msg = data?.message || data?.error || data?.detail || `HTTP ${res.status}`
+      return { error: true, message: msg }
+    }
     return data
-  } catch { return null }
+  } catch (e) {
+    return { error: true, message: 'Network error — check connection' }
+  }
 }
 
 export async function walletCredit({ token, chatId, username, amount, roundId }) {

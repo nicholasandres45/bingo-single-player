@@ -72,6 +72,7 @@ export default function App() {
   const [currentNumber, setCurrentNumber] = useState(null)
   const [animKey, setAnimKey]             = useState(0)
   const [winInfo, setWinInfo]             = useState(null)
+  const [betMsg, setBetMsg]               = useState(null)
   const [loseInfo, setLoseInfo]           = useState(null)
   const [winPositions, setWinPositions]   = useState([])
   const [takenCardIds, setTakenCardIds]   = useState(new Set())
@@ -596,11 +597,22 @@ export default function App() {
     // Deduct via wallet API (live) or Supabase wallets (dev fallback)
     if (token) {
       const result = await walletDebit({ token, chatId, username, amount: totalCost, roundId: r.round_id })
-      if (!result) return
+      if (result?.error) {
+        setBetMsg(result.message || 'Payment failed')
+        setTimeout(() => setBetMsg(null), 5000)
+        return
+      }
+      if (!result) {
+        setBetMsg('Payment failed — try again')
+        setTimeout(() => setBetMsg(null), 5000)
+        return
+      }
       if (result.insufficientBalance) {
-        // Re-fetch authoritative balance so the UI reflects reality
+        setBetMsg('Insufficient balance')
+        setTimeout(() => setBetMsg(null), 5000)
         const user = await walletGetUser(chatId, token)
-        if (user?.balance != null) setBalance(user.balance)
+        const bal = safeBalance(user?.balance ?? user?.available_balance)
+        if (bal !== null) setBalance(bal)
         return
       }
       // Use whichever field the API returns; fall back to re-fetch
@@ -832,6 +844,7 @@ export default function App() {
                 phase={phase}                     countdown={countdown}
                 balance={balance}                 cardCount={Math.round((round?.total_pot ?? 0) / betAmount)}
                 takenCardIds={takenCardIds}        myCardIds={myCardIds}
+                betMsg={betMsg}
               />
             )}
             {activeTab === 1 && (
