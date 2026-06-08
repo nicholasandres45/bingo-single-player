@@ -133,10 +133,10 @@ export default function BuyCards({
         onClick={onBet}
         disabled={!canBet}
         className={`
-          w-full py-2 rounded-xl font-display text-sm tracking-[0.1em] transition-all shrink-0
+          w-full py-3.5 rounded-2xl font-display text-base tracking-[0.12em] transition-all shrink-0 min-h-[48px]
           ${canBet
-            ? 'bg-gradient-to-r from-cyan-700 to-cyan-500 text-white cursor-pointer active:scale-95 shadow-[0_4px_14px_rgba(6,182,212,0.3)]'
-            : 'bg-gray-800/80 text-gray-600 cursor-not-allowed'}
+            ? 'bg-gradient-to-r from-cyan-700 to-cyan-500 text-white cursor-pointer active:scale-95 shadow-[0_6px_20px_rgba(6,182,212,0.4)]'
+            : 'bg-gray-800/80 text-gray-500 cursor-not-allowed'}
         `}
       >
         {btnLabel}
